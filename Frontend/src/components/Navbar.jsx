@@ -205,16 +205,7 @@ const Navbar = () => {
     return (
         <nav className={`flex w-full items-center justify-between border-t border-b ${theme === 'dark' ? 'border-neutral-800 text-white' : 'border-neutral-200 text-gray-900'} bg-transparent p-2`}>
            <div className="flex items-center gap-4">
-             {/* History icon */}
-             <button 
-               onClick={() => window.location.href = '/queryhistory'}
-               className={`flex items-center gap-1 p-2 rounded-lg transition-colors ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-blue-600 hover:bg-blue-100'}`}
-             >
-               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-               </svg>
-               <span className="text-xs font-medium">History</span>
-             </button>
+            
              
              <div className="flex items-center gap-2">
                <div className="size-6 rounded-full bg-gradient-to-br from-violet-500 to-pink-500" />
@@ -234,47 +225,91 @@ const Navbar = () => {
              
              {showMenu && (
                <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} ring-1 ring-black ring-opacity-5 z-50`}>
-                 <div className={`px-4 py-2 text-xs font-medium border-b ${theme === 'dark' ? 'border-gray-700 text-gray-200' : 'border-gray-200 text-blue-600 font-semibold'}`}>{translations.theme}</div>
+                 {/* Theme section header */}
+                 <div className={`px-4 py-2 text-xs font-medium border-b ${theme === 'dark' ? 'border-gray-700 text-gray-200' : 'border-gray-200 text-blue-600'}`}>
+                   {translations.theme}
+                 </div>
                  
+                 {/* Light mode button */}
                  <button
                    onClick={() => toggleTheme('light')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-blue-700 hover:bg-blue-50'}`}
+                   className={`w-full text-left block px-4 py-2 text-xs ${
+                     theme === 'dark' 
+                       ? 'text-gray-300 hover:bg-gray-700' 
+                       : 'text-blue-700 hover:bg-blue-50'
+                   }`}
                  >
                    {translations.lightMode}
                  </button>
+                 
+                 {/* Dark mode button */}
                  <button
                    onClick={() => toggleTheme('dark')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-blue-700 hover:bg-blue-50'}`}
+                   className={`w-full text-left block px-4 py-2 text-xs ${
+                     theme === 'dark' 
+                       ? 'text-gray-300 hover:bg-gray-700' 
+                       : 'text-blue-700 hover:bg-blue-50'
+                   }`}
                  >
                    {translations.darkMode}
                  </button>
                  
-                 <div className={`px-4 py-2 text-xs font-medium border-b border-t ${theme === 'dark' ? 'border-gray-700 text-gray-200' : 'border-gray-200 text-blue-700 font-semibold'} mt-2`}>{translations.language}</div>
+                 {/* Language section header */}
+                 <div className={`px-4 py-2 text-xs font-medium border-b border-t ${
+                   theme === 'dark' 
+                     ? 'border-gray-700 text-gray-200' 
+                     : 'border-gray-200 text-blue-600'
+                 } mt-2`}>
+                   {translations.language}
+                 </div>
                  
+                 {/* English language button */}
                  <button
                    onClick={() => changeLanguage('english')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-blue-700 hover:bg-blue-50'}`}
+                   className={`w-full text-left block px-4 py-2 text-xs ${
+                     theme === 'dark' 
+                       ? 'text-gray-300 hover:bg-gray-700' 
+                       : 'text-blue-700 hover:bg-white-50'
+                   }`}
                  >
                    English
                  </button>
+                 
+                 {/* Hindi language button */}
                  <button
                    onClick={() => changeLanguage('hindi')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-blue-700 hover:bg-blue-50'}`}
+                   className={`w-full text-left block px-4 py-2 text-xs ${
+                     theme === 'dark' 
+                       ? 'text-gray-300 hover:bg-gray-700' 
+                       : 'text-blue-700 hover:bg-blue-50'
+                   }`}
                  >
                    Hindi
                  </button>
+                 
+                 {/* Kannada language button */}
                  <button
                    onClick={() => changeLanguage('kannada')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-blue-700 hover:bg-blue-50'}`}
+                   className={`w-full text-left block px-4 py-2 text-xs ${
+                     theme === 'dark' 
+                       ? 'text-gray-300 hover:bg-gray-700' 
+                       : 'text-blue-700 hover:bg-blue-50'
+                   }`}
                  >
                    Kannada
                  </button>
                  
-                 {/* Logout option */}
+                 {/* Logout divider */}
                  <div className={`border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} mt-2`}></div>
+                 
+                 {/* Logout button */}
                  <button
                    onClick={() => {/* Logout logic would go here */}}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' ? 'text-red-400 hover:bg-gray-700' : 'text-red-600 hover:bg-red-50'}`}
+                   className={`w-full text-left block px-4  text-xs ${
+                     theme === 'dark' 
+                       ? 'text-red-400 hover:bg-gray-700' 
+                       : 'text-red-600 hover:bg-red-50'
+                   }`}
                  >
                    {translations.logout}
                  </button>

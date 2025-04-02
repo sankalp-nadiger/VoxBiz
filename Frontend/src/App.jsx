@@ -11,7 +11,7 @@ import {MainPage} from "./pages/MainPage";
 import DatabaseDashboard from "./pages/DBSelection";
 import DatabaseDetailsPage from "./pages/DBDetail";
 import VisualizationChoicePage from "./pages/VisChoice";
-
+import DataTable from "./pages/Table";
 const App = () => {
   return (
     <Router>
@@ -22,6 +22,7 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/main" element={<MainPage />} />
         <Route path="/query" element={<QueryProcessor/>}/>
+        <Route path="/table" element={<DataTable/>}/>
         <Route path="/selectgraph" element={<GraphSelector/>}/>
         <Route path="/rendergraph" element={<GraphRender/>}/>
         <Route path="/dblist" element={<DatabaseDashboard/>}/>

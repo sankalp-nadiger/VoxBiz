@@ -10,6 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.0.1",
+    "@mui/material": "^7.0.1",
+    "@mui/utils": "^7.0.1",
     "@radix-ui/react-hover-card": "^1.1.6",
     "@tsparticles/react": "^3.0.0",
     "@tsparticles/slim": "^3.8.1",
@@ -20,6 +25,7 @@
     "gsap": "^3.12.7",
     "lucide-react": "^0.486.0",
     "motion": "^12.6.3",
+    "prop-types": "^15.8.1",
     "qss": "^3.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
