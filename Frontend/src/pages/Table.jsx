@@ -677,15 +677,15 @@ useEffect(() => {
       sx={{ 
         width: '100vw',
         minHeight: '100vh',
-        backgroundImage: darkMode ? 'url(/table-bg-dark.png)' : 'url(/table-bg-light.png)', // Add light/dark image versions
+        backgroundImage:'url(/table-bg.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         display: 'flex',
         flexDirection: 'column',
         pt: 0,
-        transition: 'background-image 0.3s ease-in-out', // Add transition for smoother theme switching
-        bgcolor: darkMode ? '#121212' : '#f5f5f5', // Fallback background color
+        transition: 'background-image 0.3s ease-in-out',
+        bgcolor: darkMode ? '#121212' : '#f5f5f5',
       }}
     >
       <Navbar />
