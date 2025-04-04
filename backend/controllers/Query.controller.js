@@ -1,5 +1,5 @@
 import Database from "../models/Database.model.js";
-import { convertToSQL } from "../services/NLPProcessing.js";
+import { convertToSQL } from "../services/FastAPIClient.js";
 import { executeQuery } from "../services/DatabaseService.js";
 
 /**

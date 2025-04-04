@@ -56,7 +56,7 @@ export const connectDatabase = async (req, res) => {
 };
 
 // Get all databases for a user
-export const getUserDatabases = async (req, res) => {
+export const listDatabases = async (req, res) => {
     try {
         const userId = req.user.id;
         const databases = await Database.findAll({ where: { userId } });

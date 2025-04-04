@@ -238,14 +238,38 @@ const SignUp = () => {
     }));
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Add completion message
-    setMessages(prev => [...prev, { 
-      text: "Your account is being created! You'll receive a confirmation email shortly.", 
-      type: 'assistant' 
-    }]);
+    try {
+      const response = await fetch('http://localhost:5173/api/auth/register', { // Replace with your backend API endpoint
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Registration successful:', data);
+        setMessages(prev => [...prev, { 
+          text: "Your account has been created successfully!", 
+          type: 'assistant' 
+        }]);
+      } else {
+        console.error('Registration failed:', response.statusText);
+        setMessages(prev => [...prev, { 
+          text: "There was an issue creating your account. Please try again.", 
+          type: 'assistant' 
+        }]);
+      }
+    } catch (error) {
+      console.error('Error during registration:', error);
+      setMessages(prev => [...prev, { 
+        text: "An error occurred while creating your account. Please try again later.", 
+        type: 'assistant' 
+      }]);
+    }
   };
   
   const handleFieldFocus = (field) => {

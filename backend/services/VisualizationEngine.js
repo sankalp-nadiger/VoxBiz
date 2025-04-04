@@ -54,3 +54,32 @@ export const generateVisualization = async (queryResult, chartType, xField, yFie
         throw new Error("Failed to generate visualization.");
     }
 };
+/**
+ * Determines the best chart type based on query result structure.
+ * @param {Array} data - SQL query result
+ * @returns {string} - Suggested chart type (bar, line, pie, etc.)
+ */
+export const determineChartType = (data) => {
+    if (!data || data.length === 0) return "table"; // Default to table if no data
+
+    const firstRow = data[0];
+    const keys = Object.keys(firstRow);
+
+    if (keys.length === 2) {
+        const [x, y] = keys;
+
+        if (typeof firstRow[y] === "number") {
+            return "bar"; // Bar chart for numeric values
+        }
+    }
+
+    if (keys.length === 3) {
+        return "line"; // Line chart for time-series data
+    }
+
+    if (keys.length === 2 && typeof firstRow[keys[1]] === "number") {
+        return "pie"; // Pie chart for percentage breakdowns
+    }
+
+    return "table"; // Default fallback
+};

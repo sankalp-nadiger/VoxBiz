@@ -5,7 +5,7 @@ dotenv.config(); // Load environment variables
 
 // Check if a connection string is provided (for cloud DBs)
 const isUsingConnectionString = process.env.DATABASE_URL ? true : false;
-
+console.log("Database Password:", process.env.DB_PASSWORD);
 // Create Sequelize instance
 const sequelize = isUsingConnectionString
   ? new Sequelize(process.env.DATABASE_URL, {
