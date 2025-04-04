@@ -74,14 +74,14 @@ const generateHeadCells = (data, translations) => {
         window.currentPageTranslationKeys.push(translationKey);
       }
       
-      // Set default English label if not already set
+
       if (window.currentPageDefaultTexts && 
           !window.currentPageDefaultTexts[translationKey]) {
-        // Convert camelCase or snake_case to Title Case
+
         const defaultLabel = key
-          .replace(/([A-Z])/g, ' $1') // camelCase to space separated
-          .replace(/_/g, ' ')         // snake_case to space separated
-          .replace(/^\w/, c => c.toUpperCase()); // capitalize first letter
+          .replace(/([A-Z])/g, ' $1') 
+          .replace(/_/g, ' ')         
+          .replace(/^\w/, c => c.toUpperCase()); 
           
         window.currentPageDefaultTexts[translationKey] = defaultLabel;
       }
@@ -312,7 +312,7 @@ function EnhancedTableToolbar(props) {
           horizontal: 'right',
         }}
       >
-        <Box sx={{ p: 2, width: 250, bgcolor: darkMode ? 'rgb(18, 18, 18)' : 'white', color: darkMode ? 'white' : 'black' }}>
+        <Box sx={{ p: 2, width: 250, bgcolor: darkMode ? 'rgba(18, 18, 18, 0)' : 'white', color: darkMode ? 'white' : 'black' }}>
           <Typography variant="h6" sx={{ mb: 2 }}>
             {translations?.filterOptions || "Filter Options"}
           </Typography>
@@ -400,12 +400,11 @@ export default function DataTable() {
               throw new Error(`Error ${response.status}: ${response.statusText}`);
             }
             
-            // Check response type
+        
             const contentType = response.headers.get("content-type");
             console.log("Response content type:", contentType);
             
             if (!contentType || !contentType.includes("application/json")) {
-              // Try to get text to see what's being returned
               const textResponse = await response.text();
               console.error("Non-JSON response received:", textResponse.substring(0, 100) + "...");
               throw new Error("Expected JSON response but got: " + contentType);
@@ -413,8 +412,7 @@ export default function DataTable() {
             
             const data = await response.json();
             const title = response.headers.get('X-Title') || 'Nutrition Data';
-            
-            // Add the dynamic title to the translation system
+
             if (window.currentPageTranslationKeys && 
                 !window.currentPageTranslationKeys.includes('title')) {
               window.currentPageTranslationKeys.push('title');
@@ -702,12 +700,12 @@ useEffect(() => {
           flexGrow: 1,
           display: 'flex',
           flexDirection: 'column',
-          transition: 'background-color 0.3s ease-in-out, color 0.3s ease-in-out', // Add transition for smoother theme switching
+          transition: 'background-color 0.3s ease-in-out, color 0.3s ease-in-out', 
         }}
       >
         <EnhancedTableToolbar 
           numSelected={selected.length} 
-          title={translations?.title || tableTitle} // Use the translated title if available
+          title={translations?.title || tableTitle}
           onSearch={handleSearch}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -822,7 +820,30 @@ useEffect(() => {
             </Table>
           )}
         </TableContainer>
-        
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={filteredRows.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{ 
+            color: darkMode ? 'white' : 'inherit',
+            '.MuiSvgIcon-root': {
+              color: darkMode ? 'white' : 'inherit'
+            },
+            '.MuiTablePagination-selectLabel': {
+              color: darkMode ? 'white' : 'inherit'
+            },
+            '.MuiTablePagination-displayedRows': {
+              color: darkMode ? 'white' : 'inherit'
+            },
+            '.MuiTablePagination-select': {
+              color: darkMode ? 'white' : 'inherit'
+            }
+          }}
+        />
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
           <FormControlLabel
             control={
@@ -837,6 +858,10 @@ useEffect(() => {
           />
         </Box>
       </Paper>
+      <footer className="mt-auto py-4 text-center backdrop-blur-sm bg-white/30 dark:bg-black/30">
+        <p className="text-sm">© 2025 Data Visualization Platform</p>
+      </footer>
     </Box>
+    
   );
 }

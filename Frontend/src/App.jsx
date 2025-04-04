@@ -12,6 +12,8 @@ import DatabaseDashboard from "./pages/DBSelection";
 import DatabaseDetailsPage from "./pages/DBDetail";
 import VisualizationChoicePage from "./pages/VisChoice";
 import DataTable from "./pages/Table";
+import DatabaseRulesManager from "./pages/RuleManage";
+import ForgotPassword from "./components/ForgotPwd";
 const App = () => {
   return (
     <Router>
@@ -28,6 +30,8 @@ const App = () => {
         <Route path="/dblist" element={<DatabaseDashboard/>}/>
         <Route path="/visChoice" element={<VisualizationChoicePage/>}/>
         <Route path="/database:id" element={<DatabaseDetailsPage/>}/>
+        <Route path="/rulemanage" element={<DatabaseRulesManager/>}/>
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </Router>
   );

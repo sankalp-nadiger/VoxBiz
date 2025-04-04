@@ -24,6 +24,7 @@ const Signin = () => {
     loginAccount: 'Login to your account',
     donotHaveAccount: 'Do not have an account?',
     signupHere: 'Signup Here',
+    forgotPassword: 'Forgot Password?',
     oneClick: 'One click to go',
     allDigital: 'all accessing.'
   });
@@ -130,9 +131,11 @@ const Signin = () => {
         loginAccount: 'Login to your account',
         donotHaveAccount: 'Do not have an account?',
         signupHere: 'Signup Here',
+        forgotPassword: 'Forgot Password?',
         oneClick: 'One click to go',
         allDigital: 'all accessing.'
-      });
+    });
+    
     }
     
     setShowMenu(false);
@@ -358,6 +361,21 @@ const Signin = () => {
               {translations.loginAccount}
             </button>
           </form>
+
+          <div className="mt-2 text-center">
+  <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
+    <a
+      href="#"
+      onClick={(e) => {
+        e.preventDefault();
+        navigate('/forgot-password');
+      }}
+      className="text-blue-600 font-medium"
+    >
+      {translations.forgotPassword}
+    </a>
+  </p>
+</div>
           
           <div className="mt-4 text-center">
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>

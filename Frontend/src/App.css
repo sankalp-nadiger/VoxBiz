@@ -54,6 +54,10 @@
   background-color: #111827;
   color: white;
 }
+.light-mode {
+  background-color: #ffffff;
+  color: #111827;
+}
 
 @keyframes subtleFloat {
   0% {

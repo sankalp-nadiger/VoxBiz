@@ -457,6 +457,9 @@ const DatabaseDashboard = () => {
           databases={databases}
         />
       )}
+      <footer className="mt-auto py-4 text-center backdrop-blur-sm bg-white/30 dark:bg-black/30">
+        <p className="text-sm">© 2025 Data Visualization Platform</p>
+      </footer>
     </div>
   );
 };

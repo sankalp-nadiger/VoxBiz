@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import ChatBox from "./Chat";
+import { MessageSquare } from 'lucide-react';
 const Navbar = () => {
     const navigate = useNavigate();
+    const [isChatOpen, setIsChatOpen] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [theme, setTheme] = useState('light');
     const menuRef = useRef(null);
@@ -52,7 +54,9 @@ const Navbar = () => {
         setShowMenu(false);
       }
     };
-    
+    const handleCloseChat = () => {
+      setIsChatOpen(false);
+    };
     const toggleTheme = (newTheme) => {
       setTheme(newTheme);
       localStorage.setItem('mode', newTheme); // Save to localStorage
@@ -205,8 +209,20 @@ const Navbar = () => {
     return (
         <nav className={`flex w-full items-center justify-between border-t border-b ${theme === 'dark' ? 'border-neutral-800 text-white' : 'border-neutral-200 text-gray-900'} bg-transparent p-2`}>
            <div className="flex items-center gap-4">
-            
-             
+           <button
+        type="button" // Explicitly set button type
+        onClick={() => setIsChatOpen(true)}
+        className="inline-flex items-center gap-2 text-gray-300 bg-violet-500 border-0 py-2 px-5 focus:outline-none hover:bg-green-800 hover:text-white rounded text-base"
+      >
+        AI Chatbot <MessageSquare size={24} />
+      </button>
+      
+      {isChatOpen && (
+        <ChatBox
+          onClose={handleCloseChat}
+          theme={theme === 'dark' ? 'dark' : 'light'}
+        />
+      )}
              <div className="flex items-center gap-2">
                <div className="size-6 rounded-full bg-gradient-to-br from-violet-500 to-pink-500" />
                <h1 className="text-xs font-bold" style={{ fontSize: '1.4rem', lineHeight: '0.85rem' }}>VoxBiz</h1>
@@ -216,7 +232,7 @@ const Navbar = () => {
            <div className="relative" ref={menuRef}>
              <button 
                onClick={() => setShowMenu(!showMenu)}
-               className={`${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-100 hover:bg-blue-200'} p-2 rounded-lg transition-colors`}
+               className={`${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'} p-2 rounded-lg transition-colors`}
              >
                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke={theme === 'dark' ? 'white' : '#2563EB'}>
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
@@ -233,10 +249,9 @@ const Navbar = () => {
                  {/* Light mode button */}
                  <button
                    onClick={() => toggleTheme('light')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${
-                     theme === 'dark' 
-                       ? 'text-gray-300 hover:bg-gray-700' 
-                       : 'text-blue-700 hover:bg-blue-50'
+                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
+                     ? 'text-gray-300 hover:bg-gray-700' 
+                     : 'text-blue-700 hover:bg-gray-100'
                    }`}
                  >
                    {translations.lightMode}
@@ -245,20 +260,18 @@ const Navbar = () => {
                  {/* Dark mode button */}
                  <button
                    onClick={() => toggleTheme('dark')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${
-                     theme === 'dark' 
-                       ? 'text-gray-300 hover:bg-gray-700' 
-                       : 'text-blue-700 hover:bg-blue-50'
+                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
+                     ? 'text-gray-300 hover:bg-gray-700' 
+                     : 'text-blue-700 hover:bg-gray-100'
                    }`}
                  >
                    {translations.darkMode}
                  </button>
                  
                  {/* Language section header */}
-                 <div className={`px-4 py-2 text-xs font-medium border-b border-t ${
-                   theme === 'dark' 
-                     ? 'border-gray-700 text-gray-200' 
-                     : 'border-gray-200 text-blue-600'
+                 <div className={`px-4 py-2 text-xs font-medium border-b border-t ${theme === 'dark' 
+                   ? 'border-gray-700 text-gray-200' 
+                   : 'border-gray-200 text-blue-600'
                  } mt-2`}>
                    {translations.language}
                  </div>
@@ -266,10 +279,9 @@ const Navbar = () => {
                  {/* English language button */}
                  <button
                    onClick={() => changeLanguage('english')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${
-                     theme === 'dark' 
-                       ? 'text-gray-300 hover:bg-gray-700' 
-                       : 'text-blue-700 hover:bg-white-50'
+                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
+                     ? 'text-gray-300 hover:bg-gray-700' 
+                     : 'text-blue-700 hover:bg-gray-100'
                    }`}
                  >
                    English
@@ -278,10 +290,9 @@ const Navbar = () => {
                  {/* Hindi language button */}
                  <button
                    onClick={() => changeLanguage('hindi')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${
-                     theme === 'dark' 
-                       ? 'text-gray-300 hover:bg-gray-700' 
-                       : 'text-blue-700 hover:bg-blue-50'
+                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
+                     ? 'text-gray-300 hover:bg-gray-700' 
+                     : 'text-blue-700 hover:bg-gray-100'
                    }`}
                  >
                    Hindi
@@ -290,10 +301,9 @@ const Navbar = () => {
                  {/* Kannada language button */}
                  <button
                    onClick={() => changeLanguage('kannada')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${
-                     theme === 'dark' 
-                       ? 'text-gray-300 hover:bg-gray-700' 
-                       : 'text-blue-700 hover:bg-blue-50'
+                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
+                     ? 'text-gray-300 hover:bg-gray-700' 
+                     : 'text-blue-700 hover:bg-gray-100'
                    }`}
                  >
                    Kannada
@@ -305,10 +315,9 @@ const Navbar = () => {
                  {/* Logout button */}
                  <button
                    onClick={() => {/* Logout logic would go here */}}
-                   className={`w-full text-left block px-4  text-xs ${
-                     theme === 'dark' 
-                       ? 'text-red-400 hover:bg-gray-700' 
-                       : 'text-red-600 hover:bg-red-50'
+                   className={`w-full text-left block px-4 text-xs ${theme === 'dark' 
+                     ? 'text-red-400 hover:bg-gray-700' 
+                     : 'text-red-600 hover:bg-gray-100'
                    }`}
                  >
                    {translations.logout}
@@ -318,6 +327,6 @@ const Navbar = () => {
            </div>
          </nav>
        );
-  };
+};
 
-  export default Navbar;
+export default Navbar;

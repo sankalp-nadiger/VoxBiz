@@ -15,6 +15,8 @@ const SignUp = () => {
   const [focusedField, setFocusedField] = useState(null);
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
+  const [showPassword, setShowPassword] = useState(false);
+
   
   // Default translations in English
   const [translations, setTranslations] = useState({
@@ -41,6 +43,7 @@ const SignUp = () => {
     welcome: "Welcome to your account creation! I'm here to help you through the process.",
     fullName: "Please enter your full name as it appears on official documents.",
     email: "Great! Now enter a valid email address. We'll send a verification link to this address.",
+    password: "Securely enter your password and remember it because we will not know what you typed.",
     mobile: "Excellent progress! Please enter your mobile number with country code for verification.",
     complete: "You're doing great! Just click 'Get Started' when you're ready to create your account."
   });
@@ -214,11 +217,11 @@ const SignUp = () => {
         welcome: "Welcome to your account creation! I'm here to help you through the process.",
         fullName: "Please enter your full name as it appears on official documents.",
         email: "Great! Now enter a valid email address. We'll send a verification link to this address.",
+        password: "Securely enter your password and remember it because we will not know what you typed.",
         mobile: "Excellent progress! Please enter your mobile number with country code for verification.",
         complete: "You're doing great! Just click 'Get Started' when you're ready to create your account."
       });
       
-      // Reset messages with English welcome message
       setMessages([
         { text: "Welcome to your account creation! I'm here to help you through the process.", type: 'assistant' }
       ]);
@@ -356,6 +359,54 @@ const SignUp = () => {
                 required
               />
             </div>
+
+            <div className="relative">
+  <input
+    type={showPassword ? 'text' : 'password'}
+    name="password"
+    placeholder={translations.password}
+    className={`w-full px-4 py-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400' : 'bg-gray-50 border-gray-200 text-gray-800 focus:border-blue-500'} border focus:ring-2 focus:ring-blue-500 focus:outline-none transition`}
+    value={formData.password}
+    onChange={handleChange}
+    onFocus={() => handleFieldFocus('password')}
+    required
+  />
+  <button
+    type="button"
+    onClick={() => setShowPassword(!showPassword)}
+    className="absolute inset-y-0 right-2 flex items-center p-1 text-gray-300 hover:text-gray-700 focus:outline-none bg-transparent border-none"
+    style={{ background: 'none', boxShadow: 'none' }}
+    tabIndex={-1}
+  >
+    {showPassword ? (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-5 w-5"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path d="M10 3C5 3 1.73 7.11 1 10c.73 2.89 4 7 9 7s8.27-4.11 9-7c-.73-2.89-4-7-9-7zm0 12c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z" />
+      </svg>
+    ) : (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M17.94 17.94A10.12 10.12 0 0112 20c-5 0-9.27-4.11-10-7 0-.61.13-1.22.36-1.79M3 3l18 18" />
+        <path d="M9.88 9.88A3 3 0 0114.12 14.12M16.24 16.24A6 6 0 016.34 6.34" />
+      </svg>
+    )}
+  </button>
+</div>
+
+
+
             
             <div className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
               {translations.agreement} <a href="/terms" className="text-blue-600 hover:underline">{translations.termsOfService}</a> {translations.and} <a href="/privacy" className="text-blue-600 hover:underline">{translations.privacyPolicy}</a>.
