@@ -54,7 +54,7 @@ const Signin = () => {
               <input
                 type="email"
                 className="w-full p-2 border border-gray-300 rounded-md"
-                placeholder="ethan@mail.com"
+                placeholder="Enter email"
                 defaultValue="ethan@"
               />
             </div>

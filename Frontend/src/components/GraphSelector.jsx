@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"; // ⚠ Replace with your API key
+const GEMINI_API_KEY = "AIzaSyDNjg_c9FSrG4VG4JTEjIIcTiCtxAHxdEo"; // ⚠ Replace with your API key
 
 const GraphSelector = ({ data, onSelectGraph }) => {
   const [recommendedGraph, setRecommendedGraph] = useState(null);
@@ -16,20 +16,31 @@ const GraphSelector = ({ data, onSelectGraph }) => {
     setLoading(true);
     try {
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
-          prompt: `Given this dataset: ${JSON.stringify(
-            data
-          )}, recommend the best types of graphs (bar, line, pie, scatter, area, heatmap). Provide a primary recommendation and also suggest alternative graph options.`,
+          contents: [{
+            parts: [{
+              text: `Given this dataset: ${JSON.stringify(data)}, recommend the best types of graphs (bar, line, pie, scatter, area, heatmap,radar). Provide a primary recommendation and also suggest alternative graph options. Give only the names of the recommended and alternative options of the graph.`
+            }]
+          }]
         }
       );
-
-      const aiResponse = response.data.candidates[0].output.trim().split("\n");
-
-      setRecommendedGraph(aiResponse[0]); // First recommendation
-      setGraphOptions(aiResponse.slice(1)); // Alternative graph options
+      
+      // Handle response properly based on Gemini API structure
+      if (response.data.candidates && response.data.candidates.length > 0) {
+        const content = response.data.candidates[0].content;
+        if (content && content.parts && content.parts.length > 0) {
+          const aiResponse = content.parts[0].text.trim().split("\n");
+          setRecommendedGraph(aiResponse[0]); // First recommendation
+          setGraphOptions(aiResponse.slice(1)); // Alternative graph options
+        }
+      }
     } catch (error) {
       console.error("Error fetching graph recommendation:", error);
+      // For debugging - log the full error details
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+      }
     }
     setLoading(false);
   };

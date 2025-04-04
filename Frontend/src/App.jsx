@@ -5,6 +5,7 @@ import Signup from "./components/Signup";
 import GraphSelector from "./components/GraphSelector";
 import QueryProcessor from "./components/QueryProcessor";
 import GraphRender from "./components/GraphRender";
+import Selectg from "./components/Selectgraph";
 
 const App = () => {
   return (
@@ -15,6 +16,7 @@ const App = () => {
         <Route path="/query" element={<QueryProcessor/>}/>
         <Route path="/selectgraph" element={<GraphSelector/>}/>
         <Route path="/rendergraph" element={<GraphRender/>}/>
+        <Route path="/selgraph" element={<Selectg/>}/>
       </Routes>
     </Router>
   );
