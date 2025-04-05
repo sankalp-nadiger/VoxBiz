@@ -29,7 +29,6 @@ const Signin = () => {
     allDigital: 'all accessing.'
   });
 
-  // Load saved preferences on component mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     const savedLanguage = localStorage.getItem('language') || 'english';

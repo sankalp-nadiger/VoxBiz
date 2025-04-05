@@ -106,7 +106,7 @@ const VisualizationChoicePage = () => {
             
             <div className="flex-grow flex items-center justify-center mb-6">
               <LinkPreview 
-                url="/table-visualization"
+                url="/table"
                 isStatic={true}
                 imageSrc="/table-preview.jpg" 
                 width={280}

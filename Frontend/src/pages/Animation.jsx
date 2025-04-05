@@ -1132,7 +1132,7 @@ const explodePacketsIntoVisualizations = () => {
       )
       .to(helixGroup.current.rotation, {
         y: helixGroup.current.rotation.y + Math.PI * 0.5,
-        duration: 3,
+        duration: 2,
         ease: "sine.inOut",
       })
       .call(() => {
