@@ -1,6 +1,8 @@
 import Database from "../models/Database.model.js";
 import User from "../models/User.model.js";
 import { Sequelize } from "sequelize";
+import db from '../config/Database.config.js'; // your pg client instance
+import { differenceInDays } from 'date-fns';
 
 // Create a new database entry
 export const createDatabase = async (req, res) => {
@@ -114,6 +116,65 @@ export const listDatabases = async (req, res) => {
     }
 };
 
+
+
+export const getDatabaseInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Basic validation (assuming UUID)
+    if (!id || id.length < 8) {
+      return res.status(400).json({ success: false, message: 'Invalid database ID' });
+    }
+
+    // Dates
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    // Fetch logs for this DB
+    const { rows: logs } = await db.query(
+      `SELECT success, response_time, timestamp 
+       FROM query_logs 
+       WHERE database_id = $1`,
+      [id]
+    );
+
+    const totalQueries = logs.length;
+    const successfulQueries = logs.filter(log => log.success).length;
+    const avgResponseTime = totalQueries
+      ? (logs.reduce((sum, log) => sum + parseFloat(log.response_time), 0) / totalQueries).toFixed(2)
+      : 0;
+    const successRate = totalQueries ? ((successfulQueries / totalQueries) * 100).toFixed(1) : 0;
+
+    // Last 7 days logs only
+    const last7DaysLogs = logs.filter(
+      log => new Date(log.timestamp) >= sevenDaysAgo
+    );
+
+    const dailyCounts = Array(7).fill(0);
+    last7DaysLogs.forEach(log => {
+      const dayDiff = differenceInDays(now, new Date(log.timestamp));
+      if (dayDiff < 7) {
+        dailyCounts[6 - dayDiff] += 1;
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalQueries,
+        successRate,
+        avgResponseTime: `${avgResponseTime}s`,
+        queryFrequency: dailyCounts,
+      },
+    });
+  } catch (error) {
+    console.error('Error in getDatabaseInfo:', error);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
 // Disconnect a database (only if it's not owned by the user)
 export const disconnectDatabase = async (req, res) => {
     try {
@@ -136,3 +197,4 @@ export const disconnectDatabase = async (req, res) => {
         res.status(500).json({ error: "Failed to disconnect database" });
     }
 };
+

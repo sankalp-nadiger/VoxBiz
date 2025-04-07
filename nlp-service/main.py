@@ -608,88 +608,88 @@ class EnhancedIntentParser:
         
         return group_columns if group_columns else None
     
-    def extract_having(self, text, group_by_cols):
-        """Extract HAVING clause if present"""
-        if not group_by_cols:
-            return None
-            
-        having_conditions = []
-        
-        # Common having patterns
-        having_patterns = [
-            (r'having\s+(\w+)\s+greater than\s+(\d+)', "{} > {}"),
-            (r'having\s+(\w+)\s+>\s+(\d+)', "{} > {}"),
-            (r'having\s+(\w+)\s+less than\s+(\d+)', "{} < {}"),
-            (r'having\s+(\w+)\s+<\s+(\d+)', "{} < {}"),
-            (r'having\s+(\w+)\s+at least\s+(\d+)', "{} >= {}"),
-            (r'having\s+(\w+)\s+at most\s+(\d+)', "{} <= {}"),
-            (r'having\s+(\w+)\s+=\s+(\d+)', "{} = {}"),
-            (r'having\s+(\w+)\s+equals?\s+(\d+)', "{} = {}"),
-            (r'where\s+total\s+(\w+)\s+is\s+greater than\s+(\d+)', "SUM({}) > {}"),
-            (r'where\s+total\s+(\w+)\s+is\s+less than\s+(\d+)', "SUM({}) < {}"),
-            (r'where\s+average\s+(\w+)\s+is\s+greater than\s+(\d+)', "AVG({}) > {}"),
-            (r'where\s+average\s+(\w+)\s+is\s+less than\s+(\d+)', "AVG({}) < {}")
-        ]
-        
-        for pattern, template in having_patterns:
-            matches = re.finditer(pattern, text, re.IGNORECASE)
-            for match in matches:
-                col_term, val = match.groups()
-                
-                # Infer aggregation function from pattern
-                agg_func = None
-                if 'total' in pattern:
-                    agg_func = 'SUM'
-                elif 'average' in pattern:
-                    agg_func = 'AVG'
-                elif 'count' in pattern:
-                    agg_func = 'COUNT'
-                
-                # Try to map column to an actual column
-                for table in self.schema:
-                    for col in self.schema[table]:
-                        if col_term in col or col in col_term:
-                            if agg_func:
-                                condition = template.format(f"{agg_func}({table}.{col})", val)
+def extract_having(self, text, group_by_cols):
+    """Extract HAVING clause if present"""
+    if not group_by_cols:
+        return None
+
+    having_conditions = []
+
+    # Common having patterns
+    having_patterns = [
+        (r'having\s+(\w+)\s+greater than\s+(\d+)', "{} > {}"),
+        (r'having\s+(\w+)\s+>\s+(\d+)', "{} > {}"),
+        (r'having\s+(\w+)\s+less than\s+(\d+)', "{} < {}"),
+        (r'having\s+(\w+)\s+<\s+(\d+)', "{} < {}"),
+        (r'having\s+(\w+)\s+at least\s+(\d+)', "{} >= {}"),
+        (r'having\s+(\w+)\s+at most\s+(\d+)', "{} <= {}"),
+        (r'having\s+(\w+)\s+=\s+(\d+)', "{} = {}"),
+        (r'having\s+(\w+)\s+equals?\s+(\d+)', "{} = {}"),
+        (r'where\s+total\s+(\w+)\s+is\s+greater than\s+(\d+)', "SUM({}) > {}"),
+        (r'where\s+total\s+(\w+)\s+is\s+less than\s+(\d+)', "SUM({}) < {}"),
+        (r'where\s+average\s+(\w+)\s+is\s+greater than\s+(\d+)', "AVG({}) > {}"),
+        (r'where\s+average\s+(\w+)\s+is\s+less than\s+(\d+)', "AVG({}) < {}")
+    ]
+
+    for pattern, template in having_patterns:
+        matches = re.finditer(pattern, text, re.IGNORECASE)
+        for match in matches:
+            col_term, val = match.groups()
+
+            # Infer aggregation function from pattern
+            agg_func = None
+            if 'total' in pattern:
+                agg_func = 'SUM'
+            elif 'average' in pattern:
+                agg_func = 'AVG'
+            elif 'count' in pattern:
+                agg_func = 'COUNT'
+
+            # Try to map column to an actual column
+            for table in self.schema:
+                for col in self.schema[table]:
+                    if col_term in col or col in col_term:
+                        if agg_func:
+                            condition = template.format(f"{agg_func}({table}.{col})", val)
+                        else:
+                            # Try to infer aggregation from text
+                            if 'total' in text.lower() and text.lower().index('total') < text.lower().index(col_term):
+                                condition = template.format(f"SUM({table}.{col})", val)
+                            elif 'average' in text.lower() and text.lower().index('average') < text.lower().index(col_term):
+                                condition = template.format(f"AVG({table}.{col})", val)
+                            elif 'count' in text.lower() and text.lower().index('count') < text.lower().index(col_term):
+                                condition = template.format(f"COUNT({table}.{col})", val)
                             else:
-                                # Try to infer aggregation from text
-                                if 'total' in text.lower() and text.lower().index('total') < text.lower().index(col_term):
-                                    condition = template.format(f"SUM({table}.{col})", val)
-                                elif 'average' in text.lower() and text.lower().index('average') < text.lower().index(col_term):
-                                    condition = template.format(f"AVG({table}.{col})", val)
-                                elif 'count' in text.lower() and text.lower().index('count') < text.lower().index(col_term):
-                                    condition = template.format(f"COUNT({table}.{col})", val)
-                                else:
-                                    condition = template.format(f"{table}.{col}", val)
-                            having_conditions.append(condition)
-                            break
-        
+                                condition = template.format(f"{table}.{col}", val)
+                        having_conditions.append(condition)
+                        break
+
     # Handle "more/less than X items/orders" patterns for COUNT aggregates
-count_patterns = [
-    (r'with\s+more than\s+(\d+)\s+(\w+)', "COUNT({}) > {}"),
-    (r'with\s+at least\s+(\d+)\s+(\w+)', "COUNT({}) >= {}"),
-    (r'with\s+less than\s+(\d+)\s+(\w+)', "COUNT({}) < {}"),
-    (r'who\s+ordered\s+more than\s+(\d+)\s+times', "COUNT(orders.order_id) > {}")
-]
+    count_patterns = [
+        (r'with\s+more than\s+(\d+)\s+(\w+)', "COUNT({}) > {}"),
+        (r'with\s+at least\s+(\d+)\s+(\w+)', "COUNT({}) >= {}"),
+        (r'with\s+less than\s+(\d+)\s+(\w+)', "COUNT({}) < {}"),
+        (r'who\s+ordered\s+more than\s+(\d+)\s+times', "COUNT(orders.order_id) > {}")
+    ]
 
-for pattern, template in count_patterns:
-    matches = re.finditer(pattern, text, re.IGNORECASE)
-    for match in matches:
-        groups = match.groups()
-        val = groups[0]
-        
-        if len(groups) > 1:
-            item_term = groups[1]
-            # Map item term to table
-            if item_term in ['order', 'orders', 'purchase', 'purchases']:
-                having_conditions.append(template.format("orders.order_id", val))
-            elif item_term in ['item', 'items', 'product', 'products']:
-                having_conditions.append(template.format("order_items.item_id", val))
-        else:
-            # Default count condition
-            having_conditions.append(template.format("*", val))
+    for pattern, template in count_patterns:
+        matches = re.finditer(pattern, text, re.IGNORECASE)
+        for match in matches:
+            groups = match.groups()
+            val = groups[0]
 
-return " AND ".join(having_conditions) if having_conditions else None
+            if len(groups) > 1:
+                item_term = groups[1]
+                # Map item term to table
+                if item_term in ['order', 'orders', 'purchase', 'purchases']:
+                    having_conditions.append(template.format("orders.order_id", val))
+                elif item_term in ['item', 'items', 'product', 'products']:
+                    having_conditions.append(template.format("order_items.item_id", val))
+            else:
+                # Default count condition
+                having_conditions.append(template.format("*", val))
+
+    return " AND ".join(having_conditions) if having_conditions else None
 
 def extract_limit(self, text):
     """Extract LIMIT clause if present"""
@@ -946,29 +946,47 @@ async def process_query(request: QueryRequest):
         # Initialize pipeline components
         preprocessor = TextPreprocessor()
         language_processor = LanguageProcessor()
-        intent_parser = EnhancedIntentParser(DB_SCHEMA, TABLE_RELATIONSHIPS, TABLE_ALIASES, COLUMN_ALIASES, BUSINESS_METRICS, TIME_PERIODS)
+        intent_parser = EnhancedIntentParser(
+            DB_SCHEMA,
+            TABLE_RELATIONSHIPS,
+            TABLE_ALIASES,
+            COLUMN_ALIASES,
+            BUSINESS_METRICS,
+            TIME_PERIODS
+        )
         sql_generator = EnhancedSQLGenerator()
-        
+
         # Process the input text
         text = request.text
-        
+
         # Detect language and translate if necessary
         detected_lang = language_processor.detect_language(text)
         if detected_lang != "en":
             text = language_processor.translate_to_english(text, detected_lang)
-        
+
         # Clean and preprocess text
         cleaned_text = preprocessor.clean_text(text)
-        
+
         # Parse intent
         intent = intent_parser.parse_intent(cleaned_text)
-        
+
         # Generate SQL
         sql = sql_generator.generate_sql(intent)
-        
+
         # For debugging or when only the SQL is needed without execution
         if "generate_only" in text.lower() or "sql_only" in text.lower():
             return QueryResponse(
                 query=sql,
                 success=True
             )
+
+        # Otherwise, execute query (you can add execution logic here if needed)
+        # result = your_database_interface.execute(sql)
+        # return QueryResponse(query=sql, result=result, success=True)
+
+    except Exception as e:
+        return QueryResponse(
+            query=None,
+            success=False,
+            error=str(e)
+        )

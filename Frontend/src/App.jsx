@@ -31,7 +31,7 @@ const App = () => {
         <Route path="/rendergraph" element={<GraphRender/>}/>
         <Route path="/dblist" element={<DatabaseDashboard/>}/>
         <Route path="/visChoice" element={<VisualizationChoicePage/>}/>
-        <Route path="/database:id" element={<DatabaseDetailsPage/>}/>
+        <Route path="/database/:id" element={<DatabaseDetailsPage/>}/>
         <Route path="/rulemanage" element={<DatabaseRulesManager/>}/>
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/auth/google/callback" element={<GoogleCallback />} />
