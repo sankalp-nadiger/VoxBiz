@@ -45,6 +45,7 @@ import FormGroup from '@mui/material/FormGroup';
 import { alpha } from '@mui/material/styles';
 import { visuallyHidden } from '@mui/utils';
 import Navbar from '../components/Navbar';
+import { useLocation } from 'react-router-dom';
 
 function createData(id, name, calories, fat, carbs, protein) {
   return { id, name, calories, fat, carbs, protein };
@@ -74,7 +75,7 @@ const generateHeadCells = (data, translations) => {
   // Get first row to extract column names
   const firstRow = data[0];
   return Object.keys(firstRow)
-    .filter(key => key !== 'id') // Exclude id field
+    .filter(key => key !== 'id')
     .map(key => ({
       id: key,
       numeric: typeof firstRow[key] === 'number',
@@ -366,6 +367,7 @@ function EnhancedTableToolbar(props) {
 }
 
 export default function DataTable() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('calories');
@@ -393,62 +395,20 @@ const [customColumns, setCustomColumns] = useState([]);
   const [densePaddingLabel, setDensePaddingLabel] = useState('Dense padding');
 
   // Sample API endpoint - replace with your actual API endpoint
-  const API_ENDPOINT = import.meta.env.REACT_APP_API_ENDPOINT || '/api/data';
+  const API_ENDPOINT = "http://localhost:8000/api/query/data";
 
   // Fetch data from backend
   useEffect(() => {
-    const fetchData = async () => {
-        try {
-          setLoading(true);
-          
-          console.log("Fetching from:", API_ENDPOINT);
-          
-          try {
-            const response = await fetch(API_ENDPOINT);
-            
-            if (!response.ok) {
-              throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            
+    const processData = async () => {
+      try {
+        setLoading(true);
         
-            const contentType = response.headers.get("content-type");
-            console.log("Response content type:", contentType);
-            
-            if (!contentType || !contentType.includes("application/json")) {
-              const textResponse = await response.text();
-              console.error("Non-JSON response received:", textResponse.substring(0, 100) + "...");
-              throw new Error("Expected JSON response but got: " + contentType);
-            }
-            
-            const data = await response.json();
-            const title = response.headers.get('X-Title') || 'Nutrition Data';
-
-            if (window.currentPageTranslationKeys && 
-                !window.currentPageTranslationKeys.includes('title')) {
-              window.currentPageTranslationKeys.push('title');
-            }
-      
-            if (window.currentPageDefaultTexts) {
-              window.currentPageDefaultTexts.title = title;
-            }
-            
-            setRows(data);
-            setFilteredRows(data);
-            setTableTitle(title);
-            
-            // Generate head cells dynamically based on data
-            const dynamicHeadCells = generateHeadCells(data, translations);
-            setHeadCells(dynamicHeadCells);
-            setCustomColumns(dynamicHeadCells.map(cell => cell.id));
-            
-            // Set default orderBy to the first column (after id)
-            if (dynamicHeadCells.length > 0) {
-              setOrderBy(dynamicHeadCells[0].id);
-            }
-          } catch (error) {
-            console.log("API fetch failed, using sample data instead:", error);
-          
-          // Sample data
+        // Use the data passed as prop instead of fetching
+        const data = location.state?.visualizationData;
+        
+        if (!data || data.length === 0) {
+          console.log("No data received from props, using sample data instead");
+          // Sample data as fallback
           const sampleRows = [
             createData(1, 'Cupcake', 305, 3.7, 67, 4.3),
             createData(2, 'Donut', 452, 25.0, 51, 4.9),
@@ -476,18 +436,44 @@ const [customColumns, setCustomColumns] = useState([]);
           if (dynamicHeadCells.length > 0) {
             setOrderBy(dynamicHeadCells[0].id);
           }
+        } else {
+          // Process the data passed from props
+          const title = 'Visualization Data';
+  
+          if (window.currentPageTranslationKeys && 
+              !window.currentPageTranslationKeys.includes('title')) {
+            window.currentPageTranslationKeys.push('title');
+          }
+    
+          if (window.currentPageDefaultTexts) {
+            window.currentPageDefaultTexts.title = title;
+          }
+          
+          setRows(data);
+          setFilteredRows(data);
+          setTableTitle(title);
+          
+          // Generate head cells dynamically based on data
+          const dynamicHeadCells = generateHeadCells(data, translations);
+          setHeadCells(dynamicHeadCells);
+          setCustomColumns(dynamicHeadCells.map(cell => cell.id));
+          
+          // Set default orderBy to the first column (after id)
+          if (dynamicHeadCells.length > 0) {
+            setOrderBy(dynamicHeadCells[0].id);
+          }
         }
         
         setLoading(false);
       } catch (err) {
-        setError('Failed to fetch data');
+        setError('Failed to process data');
         setLoading(false);
-        console.error('Error fetching data:', err);
+        console.error('Error processing data:', err);
       }
     };
-
-    fetchData();
-  }, [API_ENDPOINT, translations]);
+  
+    processData();
+  }, [location.state?.visualizationData, translations]);
   useEffect(() => {
     // Option 1: Load from localStorage
     const savedQueries = localStorage.getItem('queryHistory');

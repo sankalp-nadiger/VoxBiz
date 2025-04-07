@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 const VisualizationChoicePage = () => {
   const [darkMode, setDarkMode] = useState(true);
-  const navigate=useNavigate();
+  const navigate = useNavigate();
   const [translations, setTranslations] = useState({
     pageTitle: 'Choose Visualization Type',
     tableCard: 'Table View',
@@ -16,6 +16,37 @@ const VisualizationChoicePage = () => {
     tablePreview: 'Table Preview',
     graphPreview: 'Graph Preview'
   });
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const dbId = localStorage.getItem('dbId');
+if (!dbId) {
+  console.error('No database selected');
+  return;
+}
+        const response = await fetch(`http://localhost:8000/api/query/data/${dbId}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const result = await response.json();
+        setData(result);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load data. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Listen for theme changes
   useEffect(() => {
@@ -83,8 +114,18 @@ const VisualizationChoicePage = () => {
     };
   }, []);
 
+  // Navigate to table view with data
+  const navigateToTableView = () => {
+    navigate("/table", { state: { visualizationData: data } });
+  };
+
+  // Navigate to graph view with data
+  const navigateToGraphView = () => {
+    navigate("/graph-visualization", { state: { visualizationData: data } });
+  };
+
   return (
-    <div className={`min-h-screen w-screen                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                flex flex-col ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}
+    <div className={`min-h-screen w-screen flex flex-col ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}
          style={{
            backgroundImage: `url('/choice-bg.png')`,
            backgroundSize: 'cover',
@@ -97,6 +138,13 @@ const VisualizationChoicePage = () => {
         <h1 className="text-3xl font-bold text-center mb-12 backdrop-blur-sm py-2 rounded">
           {translations.pageTitle}
         </h1>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6 max-w-4xl mx-auto">
+            <strong className="font-bold">Error: </strong>
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
         
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Table Visualization Card */}
@@ -114,18 +162,20 @@ const VisualizationChoicePage = () => {
                 className="text-center text-blue-600 dark:text-blue-400"
               >
                 <div className="text-blue-600 dark:text-blue-400 flex flex-col items-center">
-                  
                   <span className="mt-2">{translations.tablePreview}</span>
                 </div>
               </LinkPreview>
             </div>
             
             <button 
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
-      onClick={() => navigate("/table-visualization")}
-    >
-      {translations.chooseButton}
-    </button>
+              className={`w-full py-2 px-4 rounded-lg transition-colors ${
+                loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              onClick={navigateToTableView}
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : translations.chooseButton}
+            </button>
           </div>
           
           {/* Graph Visualization Card */}
@@ -137,20 +187,25 @@ const VisualizationChoicePage = () => {
               <LinkPreview 
                 url="/graph-visualization"
                 isStatic={true}
-                imageSrc="/graph-preview.jpg" // Placeholder - replace with actual preview image
+                imageSrc="/graph-preview.jpg"
                 width={280}
                 height={180}
                 className="text-center text-blue-600 dark:text-blue-400"
               >
                 <div className="text-blue-600 dark:text-blue-400 flex flex-col items-center">
-                  
                   <span className="mt-2">{translations.graphPreview}</span>
                 </div>
               </LinkPreview>
             </div>
             
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
-              {translations.chooseButton}
+            <button 
+              className={`w-full py-2 px-4 rounded-lg transition-colors ${
+                loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              onClick={navigateToGraphView}
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : translations.chooseButton}
             </button>
           </div>
         </div>

@@ -4,7 +4,7 @@ const ForgotPassword = ({ theme }) => {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [step, setStep] = useState(1); // Step 1: Enter email, Step 2: Enter code, Step 3: Reset password
+  const [step, setStep] = useState(1);
 
   const handleSendCode = async () => {
     const response = await fetch('http://localhost:3000/api/auth/send-reset-code', {

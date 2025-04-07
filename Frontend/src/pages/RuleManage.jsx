@@ -61,16 +61,14 @@ const DatabaseRulesManager = () => {
         setUserHasAccess(true);
         
         // Fetch available databases
-        const dbResponse = await fetch('http://localhost:3000/api/database/list');
+        const rulesResponse = await fetch('http://localhost:3000/api/database/rules/:dbId');
         const dbData = await dbResponse.json();
         setDatabases(dbData);
-        
-        // Fetch rules
-        const rulesResponse = await fetch(API_ENDPOINT);
         
         if (!rulesResponse.ok) {
           throw new Error(`Error ${rulesResponse.status}: ${rulesResponse.statusText}`);
         }
+        
         
         const contentType = rulesResponse.headers.get("content-type");
         
@@ -419,7 +417,7 @@ const DatabaseRulesManager = () => {
   }
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}
+    <div className={`min-h-screen w-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}
     style={{
         backgroundImage: `url('/choice-bg.png')`,
         backgroundSize: 'cover',
@@ -452,7 +450,7 @@ const DatabaseRulesManager = () => {
             placeholder={getTranslatedText('searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+            className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300'}`}
           />
         </div>
         
@@ -550,46 +548,49 @@ const DatabaseRulesManager = () => {
         </div>
       </div>
       
-      {/* RuleEditor Modal */}
+      {/* RuleEditor Modal - IMPROVED */}
       <Dialog 
         open={openRuleEditor} 
         onClose={handleCloseRuleEditor}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          className: darkMode ? 'bg-gray-800 text-white' : 'bg-white'
+        }}
       >
-        <DialogTitle>
+        <DialogTitle className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           {currentRule && currentRule.id ? getTranslatedText('editRule') : getTranslatedText('createRule')}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent className="pt-4">
           {currentRule && (
-            <div className="grid grid-cols-1 gap-4 pt-2">
+            <div className="grid grid-cols-1 gap-6 pt-4">
               <div>
-                <label className="block text-sm font-medium mb-1">{getTranslatedText('ruleName')} *</label>
+                <label className="block text-sm font-medium mb-2">{getTranslatedText('ruleName')} *</label>
                 <input
                   type="text"
                   value={currentRule.name || ''}
                   onChange={(e) => setCurrentRule({...currentRule, name: e.target.value})}
-                  className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                  className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   required
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">{getTranslatedText('ruleDescription')}</label>
+                <label className="block text-sm font-medium mb-2">{getTranslatedText('ruleDescription')}</label>
                 <textarea
                   value={currentRule.description || ''}
                   onChange={(e) => setCurrentRule({...currentRule, description: e.target.value})}
                   rows="2"
-                  className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                  className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">{getTranslatedText('database')} *</label>
+                <label className="block text-sm font-medium mb-2">{getTranslatedText('database')} *</label>
                 <select
                   value={currentRule.database || ''}
                   onChange={(e) => setCurrentRule({...currentRule, database: e.target.value})}
-                  className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                  className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   required
                 >
                   {databases.map((db) => (
@@ -599,8 +600,8 @@ const DatabaseRulesManager = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">{getTranslatedText('queryTypes')} *</label>
-                <div className="flex flex-wrap gap-2">
+                <label className="block text-sm font-medium mb-2">{getTranslatedText('queryTypes')} *</label>
+                <div className={`flex flex-wrap gap-3 p-3 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
                   {queryTypes.map((type) => (
                     <label key={type} className="inline-flex items-center">
                       <input
@@ -612,19 +613,19 @@ const DatabaseRulesManager = () => {
                             : (currentRule.queryTypes || []).filter(t => t !== type);
                           setCurrentRule({...currentRule, queryTypes: updatedTypes});
                         }}
-                        className="mr-1"
+                        className="mr-2 h-4 w-4"
                       />
-                      <span>{type}</span>
+                      <span className={`py-1 px-2 rounded ${darkMode ? 'bg-gray-600 text-white' : 'bg-white text-gray-800'}`}>{type}</span>
                     </label>
                   ))}
                 </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-1">{getTranslatedText('conditions')}</label>
-                <div className="space-y-2">
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-750 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                <label className="block text-sm font-medium mb-3">{getTranslatedText('conditions')}</label>
+                <div className="space-y-3">
                   {(currentRule.conditions || []).map((condition, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 border rounded-md">
+                    <div key={idx} className={`flex items-center gap-3 p-3 rounded-md ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}>
                       <div className="flex-grow">
                         <select
                           value={condition.type}
@@ -633,7 +634,7 @@ const DatabaseRulesManager = () => {
                             updatedConditions[idx] = {...condition, type: e.target.value};
                             setCurrentRule({...currentRule, conditions: updatedConditions});
                           }}
-                          className={`w-full p-1 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                          className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'}`}
                         >
                           {conditionTypes.map((type) => (
                             <option key={type.id} value={type.id}>{type.label}</option>
@@ -650,7 +651,7 @@ const DatabaseRulesManager = () => {
                             setCurrentRule({...currentRule, conditions: updatedConditions});
                           }}
                           placeholder="Condition value"
-                          className={`w-full p-1 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                          className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' : 'bg-white border-gray-300'}`}
                         />
                       </div>
                       <button
@@ -659,9 +660,9 @@ const DatabaseRulesManager = () => {
                           updatedConditions.splice(idx, 1);
                           setCurrentRule({...currentRule, conditions: updatedConditions});
                         }}
-                        className="p-1 text-red-500"
+                        className={`p-2 rounded-full ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-100 hover:bg-gray-200'}`}
                       >
-                        <DeleteIcon fontSize="small" />
+                        <DeleteIcon fontSize="small" className="text-red-500" />
                       </button>
                     </div>
                   ))}
@@ -676,20 +677,20 @@ const DatabaseRulesManager = () => {
                         conditions: [...(currentRule.conditions || []), newCondition]
                       });
                     }}
-                    className={`w-full py-1 border-dashed border-2 rounded-md ${
-                      darkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
+                    className={`w-full py-2 px-3 border-dashed border-2 rounded-md flex items-center justify-center ${
+                      darkMode ? 'border-gray-600 hover:border-gray-500 text-gray-300' : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    + Add Condition
+                    <AddIcon className="mr-1" /> Add Condition
                   </button>
                 </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-1">{getTranslatedText('maskingPolicy')}</label>
-                <div className="space-y-2">
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-750 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                <label className="block text-sm font-medium mb-3">{getTranslatedText('maskingPolicy')}</label>
+                <div className="space-y-3">
                   {(currentRule.maskingPolicies || []).map((policy, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 border rounded-md">
+                    <div key={idx} className={`flex items-center gap-3 p-3 rounded-md ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-white border border-gray-200'}`}>
                       <div className="flex-grow">
                         <input
                           type="text"
@@ -700,7 +701,7 @@ const DatabaseRulesManager = () => {
                             setCurrentRule({...currentRule, maskingPolicies: updatedPolicies});
                           }}
                           placeholder="Column name"
-                          className={`w-full p-1 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                          className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' : 'bg-white border-gray-300'}`}
                         />
                       </div>
                       <div className="flex-grow">
@@ -711,7 +712,7 @@ const DatabaseRulesManager = () => {
                             updatedPolicies[idx] = {...policy, type: e.target.value};
                             setCurrentRule({...currentRule, maskingPolicies: updatedPolicies});
                           }}
-                          className={`w-full p-1 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                          className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'}`}
                         >
                           {maskingTypes.map((type) => (
                             <option key={type.id} value={type.id}>{type.label}</option>
@@ -724,74 +725,9 @@ const DatabaseRulesManager = () => {
                           updatedPolicies.splice(idx, 1);
                           setCurrentRule({...currentRule, maskingPolicies: updatedPolicies});
                         }}
-                        className="p-1 text-red-500"
+                        className={`p-2 rounded-full ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-100 hover:bg-gray-200'}`}
                       >
-                        <DeleteIcon fontSize="small" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => {
-                      const newCondition = {
-                        type: conditionTypes[0].id,
-                        value: ''
-                      };
-                      setCurrentRule({
-                        ...currentRule, 
-                        conditions: [...(currentRule.conditions || []), newCondition]
-                      });
-                    }}
-                    className={`w-full py-1 border-dashed border-2 rounded-md ${
-                      darkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    + Add Condition
-                  </button>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">{getTranslatedText('maskingPolicy')}</label>
-                <div className="space-y-2">
-                  {(currentRule.maskingPolicies || []).map((policy, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 border rounded-md">
-                      <div className="flex-grow">
-                        <input
-                          type="text"
-                          value={policy.column}
-                          onChange={(e) => {
-                            const updatedPolicies = [...(currentRule.maskingPolicies || [])];
-                            updatedPolicies[idx] = {...policy, column: e.target.value};
-                            setCurrentRule({...currentRule, maskingPolicies: updatedPolicies});
-                          }}
-                          placeholder="Column name"
-                          className={`w-full p-1 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
-                        />
-                      </div>
-                      <div className="flex-grow">
-                        <select
-                          value={policy.type}
-                          onChange={(e) => {
-                            const updatedPolicies = [...(currentRule.maskingPolicies || [])];
-                            updatedPolicies[idx] = {...policy, type: e.target.value};
-                            setCurrentRule({...currentRule, maskingPolicies: updatedPolicies});
-                          }}
-                          className={`w-full p-1 border rounded-md ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
-                        >
-                          {maskingTypes.map((type) => (
-                            <option key={type.id} value={type.id}>{type.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const updatedPolicies = [...(currentRule.maskingPolicies || [])];
-                          updatedPolicies.splice(idx, 1);
-                          setCurrentRule({...currentRule, maskingPolicies: updatedPolicies});
-                        }}
-                        className="p-1 text-red-500"
-                      >
-                        <DeleteIcon fontSize="small" />
+                        <DeleteIcon fontSize="small" className="text-red-500" />
                       </button>
                     </div>
                   ))}
@@ -806,11 +742,11 @@ const DatabaseRulesManager = () => {
                         maskingPolicies: [...(currentRule.maskingPolicies || []), newPolicy]
                       });
                     }}
-                   className={`w-full py-1 border-dashed border-2 rounded-md ${
-  darkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
-}`}
+                    className={`w-full py-2 px-3 border-dashed border-2 rounded-md flex items-center justify-center ${
+                      darkMode ? 'border-gray-600 hover:border-gray-500 text-gray-300' : 'border-gray-300 hover:border-gray-400'
+                    }`}
                   >
-                    + Add Masking Policy
+                    <AddIcon className="mr-1" /> Add Masking Policy
                   </button>
                 </div>
               </div>
@@ -819,10 +755,10 @@ const DatabaseRulesManager = () => {
             </div>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions className={`p-4 ${darkMode ? 'border-t border-gray-700' : 'border-t border-gray-200'}`}>
           <button 
             onClick={handleCloseRuleEditor}
-            className={`px-4 py-2 rounded-md ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+            className={`px-4 py-2 rounded-md mr-2 ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
           >
             {getTranslatedText('cancel')}
           </button>
@@ -835,49 +771,65 @@ const DatabaseRulesManager = () => {
         </DialogActions>
       </Dialog>
       
-      {/* RuleTester Modal */}
+      {/* RuleTester Modal - IMPROVED */}
       <Dialog 
         open={openRuleTester} 
         onClose={handleCloseRuleTester}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          className: darkMode ? 'bg-gray-800 text-white' : 'bg-white'
+        }}
       >
-        <DialogTitle>{getTranslatedText('testRule')}</DialogTitle>
-        <DialogContent>
+        <DialogTitle className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          {getTranslatedText('testRule')}
+        </DialogTitle>
+        <DialogContent className="pt-4">
           {currentRule && (
-            <div className="space-y-4 pt-2">
-              <div>
-                <h3 className="font-medium">{currentRule.name}</h3>
-                <p className="text-sm opacity-70">{currentRule.description}</p>
+            <div className="space-y-6 pt-4">
+              <div className={`p-4 rounded-md ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-gray-50 border border-gray-200'}`}>
+                <h3 className="font-medium text-lg">{currentRule.name}</h3>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{currentRule.description}</p>
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">{getTranslatedText('testSQL')}</label>
+                <label className="block text-sm font-medium mb-2">{getTranslatedText('testSQL')}</label>
                 <textarea
                   value={testQuery}
                   onChange={(e) => setTestQuery(e.target.value)}
-                  rows="4"
-                  className={`w-full p-2 border rounded-md font-mono text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+                  rows="5"
+                  className={`w-full p-3 border rounded-md font-mono text-sm ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                 ></textarea>
               </div>
               
               {testResult && (
-                <div className={`p-4 rounded-md ${
+                <div className={`p-5 rounded-md ${
                   testResult.passed ? 
-                    (darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800') : 
-                    (darkMode ? 'bg-red-900 text-red-100' : 'bg-red-100 text-red-800')
+                    (darkMode ? 'bg-green-900/30 border border-green-700 text-green-100' : 'bg-green-50 border border-green-200 text-green-800') : 
+                    (darkMode ? 'bg-red-900/30 border border-red-700 text-red-100' : 'bg-red-50 border border-red-200 text-red-800')
                 }`}>
-                  <h3 className="font-medium mb-2">{getTranslatedText('testResults')}</h3>
+                  <h3 className="font-medium text-lg mb-3">{getTranslatedText('testResults')}</h3>
                   
-                  <div className={`mb-2 p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                    <p className="font-medium">Status: {testResult.passed ? 'Passed' : 'Failed'}</p>
-                    {testResult.error && <p>Error: {testResult.error}</p>}
+                  <div className={`mb-4 p-3 rounded ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                    <p className="font-medium flex items-center">
+                      Status: 
+                      <span className={`ml-2 px-2 py-1 rounded-full text-sm ${
+                        testResult.passed ? 
+                          (darkMode ? 'bg-green-800 text-green-100' : 'bg-green-100 text-green-800') : 
+                          (darkMode ? 'bg-red-800 text-red-100' : 'bg-red-100 text-red-800')
+                      }`}>
+                        {testResult.passed ? 'Passed' : 'Failed'}
+                      </span>
+                    </p>
+                    {testResult.error && <p className="mt-2">Error: {testResult.error}</p>}
                   </div>
                   
                   {testResult.modifiedQuery && (
-                    <div className={`p-2 rounded font-mono text-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                      <p className="font-medium mb-1">Modified Query:</p>
-                      <pre>{testResult.modifiedQuery}</pre>
+                    <div className={`p-3 rounded ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                      <p className="font-medium mb-2">Modified Query:</p>
+                      <pre className={`p-3 rounded font-mono text-sm overflow-x-auto ${darkMode ? 'bg-gray-900 text-gray-300' : 'bg-gray-50 text-gray-800'}`}>
+                        {testResult.modifiedQuery}
+                      </pre>
                     </div>
                   )}
                 </div>
@@ -885,10 +837,10 @@ const DatabaseRulesManager = () => {
             </div>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions className={`p-4 ${darkMode ? 'border-t border-gray-700' : 'border-t border-gray-200'}`}>
           <button 
             onClick={handleCloseRuleTester}
-            className={`px-4 py-2 rounded-md ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+            className={`px-4 py-2 rounded-md mr-2 ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
           >
             {getTranslatedText('cancel')}
           </button>
@@ -901,22 +853,31 @@ const DatabaseRulesManager = () => {
         </DialogActions>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog - IMPROVED */}
       <Dialog
         open={confirmDeleteOpen}
         onClose={handleCloseDeleteConfirm}
+        PaperProps={{
+          className: darkMode ? 'bg-gray-800 text-white' : 'bg-white'
+        }}
       >
-        <DialogTitle>{getTranslatedText('deleteRule')}</DialogTitle>
-        <DialogContent>
-          <p>{getTranslatedText('confirmDelete')}</p>
-          {ruleToDelete && (
-            <div className="mt-2 font-medium">"{ruleToDelete.name}"</div>
-          )}
+        <DialogTitle className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          {getTranslatedText('deleteRule')}
+        </DialogTitle>
+        <DialogContent className="pt-4">
+          <div className="pt-4">
+            <p>{getTranslatedText('confirmDelete')}</p>
+            {ruleToDelete && (
+              <div className={`mt-3 p-3 rounded-md ${darkMode ? 'bg-gray-700 border border-gray-600' : 'bg-gray-50 border border-gray-200'}`}>
+                <span className="font-medium">"{ruleToDelete.name}"</span>
+              </div>
+            )}
+          </div>
         </DialogContent>
-        <DialogActions>
+        <DialogActions className={`p-4 ${darkMode ? 'border-t border-gray-700' : 'border-t border-gray-200'}`}>
           <button
             onClick={handleCloseDeleteConfirm}
-            className={`px-4 py-2 rounded-md ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+            className={`px-4 py-2 rounded-md mr-2 ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
           >
             {getTranslatedText('cancel')}
           </button>
