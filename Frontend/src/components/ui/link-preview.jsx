@@ -1,134 +1,56 @@
-import * as HoverCardPrimitive from "@radix-ui/react-hover-card";
-import { encode } from "qss";
-import React from "react";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useSpring,
-} from "motion/react";
-import { cn } from "../../lib/utils";
+import React, { useState, useEffect, useRef } from 'react';
 
-export const LinkPreview = ({
-  children,
-  url,
-  className,
-  width = 200,
-  height = 125,
-  quality = 50,
-  isStatic = false,
-  imageSrc = "",
-}) => {
-  let src;
-  if (!isStatic) {
-    const params = encode({
-      url,
-      screenshot: true,
-      meta: false,
-      embed: "screenshot.url",
-      colorScheme: "dark",
-      "viewport.isMobile": true,
-      "viewport.deviceScaleFactor": 1,
-      "viewport.width": width * 3,
-      "viewport.height": height * 3,
-    });
-    src = `https://api.microlink.io/?${params}`;
-  } else {
-    src = imageSrc;
-  }
- 
-  const [isOpen, setOpen] = React.useState(false);
-  const [isMounted, setIsMounted] = React.useState(false);
- 
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
- 
-  const springConfig = { stiffness: 100, damping: 15 };
-  const x = useMotionValue(0);
-  const translateX = useSpring(x, springConfig);
- 
-  const handleMouseMove = (event) => {
-    const targetRect = event.target.getBoundingClientRect();
-    const eventOffsetX = event.clientX - targetRect.left;
-    const offsetFromCenter = (eventOffsetX - targetRect.width / 2) / 2; // Reduce the effect to make it subtle
-    x.set(offsetFromCenter);
-  };
- 
+export const PreviewOption = ({ title, imageSrc }) => {
+  const [isHovering, setIsHovering] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imgRef = useRef(null);
+  
+  // Preload the image immediately on component mount
+  useEffect(() => {
+    const preloadImage = new Image();
+    preloadImage.src = imageSrc;
+    preloadImage.onload = () => setImageLoaded(true);
+  }, [imageSrc]);
+  
   return (
-    <>
-      {isMounted ? (
-        <div className="hidden">
-          <img
-            src={src}
-            width={width}
-            height={height}
-            alt="hidden image"
-            className="w-full h-auto"
-          />
-        </div>
-      ) : null}
- 
-      <HoverCardPrimitive.Root
-        openDelay={50}
-        closeDelay={100}
-        onOpenChange={(open) => {
-          setOpen(open);
-        }}
+    <div className="flex flex-col items-center bg-gray-800 rounded-lg p-4 shadow-md relative">
+      <span 
+        className="text-blue-400 cursor-pointer relative z-10"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
       >
-        <HoverCardPrimitive.Trigger
-          onMouseMove={handleMouseMove}
-          className={cn("text-black dark:text-white", className)}
-          as="a"
-          href={url}
-        >
-          {children}
-        </HoverCardPrimitive.Trigger>
- 
-        <HoverCardPrimitive.Content
-          className="[transform-origin:var(--radix-hover-card-content-transform-origin)]"
-          side="top"
-          align="center"
-          sideOffset={10}
-        >
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.6 }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                  transition: {
-                    type: "spring",
-                    stiffness: 260,
-                    damping: 20,
-                  },
-                }}
-                exit={{ opacity: 0, y: 20, scale: 0.6 }}
-                className="shadow-xl rounded-xl"
-                style={{
-                  x: translateX,
-                }}
-              >
-                <a
-                  href={url}
-                  className="block p-1 bg-white border-2 border-transparent shadow rounded-xl hover:border-neutral-200 dark:hover:border-neutral-800"
-                  style={{ fontSize: 0 }}
-                >
-                  <img
-                    src={isStatic ? imageSrc : src}
-                    width={width}
-                    height={height}
-                    className="rounded-lg w-full h-auto"
-                    alt="preview image"
-                  />
-                </a>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </HoverCardPrimitive.Content>
-      </HoverCardPrimitive.Root>
-    </>
+        {title}
+      </span>
+      
+      {imageLoaded && (
+  <div 
+    className={`fixed z-50 rounded shadow-lg transition-opacity duration-150 ${
+      isHovering ? 'opacity-100' : 'opacity-0 pointer-events-none'
+    }`}
+    style={{ 
+      backgroundColor: '#1F2937',
+      border: '1px solid #374151',
+      top: '60%',
+      left: '40%',
+      transform: 'translate(-50%, -50%)',
+      width: '50vw',
+    }}
+  >
+    <img 
+      ref={imgRef}
+      src={imageSrc} 
+      alt={`${title} preview`} 
+      style={{
+        width: '100%',         // fills container width now
+        height: 'auto',        // keeps aspect ratio
+        objectFit: 'cover',
+        borderRadius: '0.25rem',
+      }}
+    />
+  </div>
+)}
+
+
+    </div>
   );
 };

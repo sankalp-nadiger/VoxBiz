@@ -69,7 +69,7 @@ const DatabaseRulesManager = () => {
           throw new Error(`Error ${rulesResponse.status}: ${rulesResponse.statusText}`);
         }
         
-        
+
         const contentType = rulesResponse.headers.get("content-type");
         
         if (!contentType || !contentType.includes("application/json")) {
@@ -136,7 +136,7 @@ const DatabaseRulesManager = () => {
     // Register this page's translation keys
     window.currentPageTranslationKeys = [
       'pageTitle', 'createRule', 'editRule', 'deleteRule', 'testRule',
-      'database', 'queryTypes', 'conditions', 'maskingPolicy',
+     'queryTypes', 'conditions', 'maskingPolicy',
       'ruleName', 'ruleDescription', 'save', 'cancel', 'noRulesFound',
       'confirmDelete', 'testSQL', 'runTest', 'testResults',
       'searchPlaceholder', 'accessDenied', 'loading'
@@ -149,7 +149,6 @@ const DatabaseRulesManager = () => {
       editRule: 'Edit Rule',
       deleteRule: 'Delete Rule',
       testRule: 'Test Rule',
-      database: 'Database',
       queryTypes: 'Query Types',
       conditions: 'Conditions',
       maskingPolicy: 'Masking Policy',
@@ -190,7 +189,6 @@ const DatabaseRulesManager = () => {
     if (searchTerm) {
       const filtered = rules.filter(rule => 
         rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rule.database.toLowerCase().includes(searchTerm.toLowerCase()) ||
         rule.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredRules(filtered);
@@ -205,7 +203,6 @@ const DatabaseRulesManager = () => {
       id: null,
       name: '',
       description: '',
-      database: databases.length > 0 ? databases[0].name : '',
       queryTypes: [],
       conditions: [],
       maskingPolicies: []
@@ -243,7 +240,7 @@ const DatabaseRulesManager = () => {
   
   const handleSaveRule = async () => {
     // Validate form
-    if (!currentRule.name || !currentRule.database || currentRule.queryTypes.length === 0) {
+    if (!currentRule.name || currentRule.queryTypes.length === 0) {
       setError('Please fill in all required fields');
       return;
     }
@@ -364,9 +361,6 @@ const DatabaseRulesManager = () => {
         <h3 className="font-medium text-lg mb-2">Rule Preview</h3>
         <div className="grid grid-cols-1 gap-2">
           <div>
-            <span className="font-medium">Database:</span> {currentRule.database}
-          </div>
-          <div>
             <span className="font-medium">Query Types:</span> {currentRule.queryTypes.join(', ')}
           </div>
           {currentRule.conditions && currentRule.conditions.length > 0 && (
@@ -417,15 +411,17 @@ const DatabaseRulesManager = () => {
   }
 
   return (
-    <div className={`min-h-screen w-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}
+    <div className={`min-h-screen flex flex-col w-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}
     style={{
-        backgroundImage: `url('/choice-bg.png')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}>
+      backgroundImage: `url('/rule-bg.png')`,
+      backgroundSize: '50%', // or even smaller like '10%' or '5%' to zoom out more
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }}
+    >
+      {/* Modals */}    
       <Navbar />
-      
+      <main className="flex-grow">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">{getTranslatedText('pageTitle')}</h1>
@@ -463,9 +459,6 @@ const DatabaseRulesManager = () => {
                   {getTranslatedText('ruleName')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  {getTranslatedText('database')}
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
                   {getTranslatedText('queryTypes')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
@@ -495,9 +488,6 @@ const DatabaseRulesManager = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium">{rule.name}</div>
                       <div className="text-sm opacity-70">{rule.description}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {rule.database}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">
@@ -586,20 +576,6 @@ const DatabaseRulesManager = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">{getTranslatedText('database')} *</label>
-                <select
-                  value={currentRule.database || ''}
-                  onChange={(e) => setCurrentRule({...currentRule, database: e.target.value})}
-                  className={`w-full p-2 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
-                  required
-                >
-                  {databases.map((db) => (
-                    <option key={db.id} value={db.name}>{db.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
                 <label className="block text-sm font-medium mb-2">{getTranslatedText('queryTypes')} *</label>
                 <div className={`flex flex-wrap gap-3 p-3 border rounded-md ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
                   {queryTypes.map((type) => (
@@ -667,22 +643,24 @@ const DatabaseRulesManager = () => {
                     </div>
                   ))}
                   <button
-                    onClick={() => {
-                      const newCondition = {
-                        type: conditionTypes[0].id,
-                        value: ''
-                      };
-                      setCurrentRule({
-                        ...currentRule, 
-                        conditions: [...(currentRule.conditions || []), newCondition]
-                      });
-                    }}
-                    className={`w-full py-2 px-3 border-dashed border-2 rounded-md flex items-center justify-center ${
-                      darkMode ? 'border-gray-600 hover:border-gray-500 text-gray-300' : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <AddIcon className="mr-1" /> Add Condition
-                  </button>
+  onClick={() => {
+    const newCondition = {
+      type: conditionTypes[0].id,
+      value: ''
+    };
+    setCurrentRule({
+      ...currentRule,
+      conditions: [...(currentRule.conditions || []), newCondition]
+    });
+  }}
+  className={`w-full py-2 px-3 border-dashed border-2 rounded-md flex items-center justify-center ${
+    darkMode 
+      ? 'border-gray-600 hover:border-gray-500 text-gray-300' 
+      : 'border-gray-300 hover:border-gray-400 text-gray-600'
+  }`}
+>
+  Add Condition
+</button>
                 </div>
               </div>
               
@@ -732,22 +710,24 @@ const DatabaseRulesManager = () => {
                     </div>
                   ))}
                   <button
-                    onClick={() => {
-                      const newPolicy = {
-                        column: '',
-                        type: maskingTypes[0].id
-                      };
-                      setCurrentRule({
-                        ...currentRule, 
-                        maskingPolicies: [...(currentRule.maskingPolicies || []), newPolicy]
-                      });
-                    }}
-                    className={`w-full py-2 px-3 border-dashed border-2 rounded-md flex items-center justify-center ${
-                      darkMode ? 'border-gray-600 hover:border-gray-500 text-gray-300' : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <AddIcon className="mr-1" /> Add Masking Policy
-                  </button>
+  onClick={() => {
+    const newPolicy = {
+      column: '',
+      type: maskingTypes[0].id
+    };
+    setCurrentRule({
+      ...currentRule,
+      maskingPolicies: [...(currentRule.maskingPolicies || []), newPolicy]
+    });
+  }}
+  className={`w-full py-2 px-3 border-dashed border-2 rounded-md flex items-center justify-center ${
+    darkMode 
+      ? 'border-gray-600 hover:border-gray-500 text-gray-300' 
+      : 'border-gray-300 hover:border-gray-400 text-gray-600'
+  }`}
+>
+  Add Masking Policy
+</button>
                 </div>
               </div>
               
@@ -889,9 +869,10 @@ const DatabaseRulesManager = () => {
           </button>
         </DialogActions>
       </Dialog>
+      </main>
       <footer className="mt-auto py-4 text-center backdrop-blur-sm bg-white/30 dark:bg-black/30">
-        <p className="text-sm">© 2025 Data Visualization Platform</p>
-      </footer>
+    <p className="text-sm">© 2025 Data Visualization Platform</p>
+  </footer>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
-import { LinkPreview } from '../components/ui/link-preview';
+import { PreviewOption } from '../components/ui/link-preview';
 import { useNavigate } from "react-router-dom";
 
 const VisualizationChoicePage = () => {
@@ -149,65 +149,43 @@ if (!dbId) {
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Table Visualization Card */}
           <div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg p-6 flex flex-col hover:shadow-xl transition-all">
-            <h2 className="text-2xl font-bold mb-3">{translations.tableCard}</h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.tableDescription}</p>
-            
-            <div className="flex-grow flex items-center justify-center mb-6">
-              <LinkPreview 
-                url="/table"
-                isStatic={true}
-                imageSrc="/table-preview.jpg" 
-                width={280}
-                height={180}
-                className="text-center text-blue-600 dark:text-blue-400"
-              >
-                <div className="text-blue-600 dark:text-blue-400 flex flex-col items-center">
-                  <span className="mt-2">{translations.tablePreview}</span>
-                </div>
-              </LinkPreview>
-            </div>
-            
-            <button 
-              className={`w-full py-2 px-4 rounded-lg transition-colors ${
-                loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-              onClick={navigateToTableView}
-              disabled={loading}
-            >
-              {loading ? 'Loading...' : translations.chooseButton}
-            </button>
-          </div>
-          
-          {/* Graph Visualization Card */}
-          <div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg p-6 flex flex-col hover:shadow-xl transition-all">
-            <h2 className="text-2xl font-bold mb-3">{translations.graphCard}</h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.graphDescription}</p>
-            
-            <div className="flex-grow flex items-center justify-center mb-6">
-              <LinkPreview 
-                url="/graph-visualization"
-                isStatic={true}
-                imageSrc="/graph-preview.jpg"
-                width={280}
-                height={180}
-                className="text-center text-blue-600 dark:text-blue-400"
-              >
-                <div className="text-blue-600 dark:text-blue-400 flex flex-col items-center">
-                  <span className="mt-2">{translations.graphPreview}</span>
-                </div>
-              </LinkPreview>
-            </div>
-            
-            <button 
-              className={`w-full py-2 px-4 rounded-lg transition-colors ${
-                loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-              onClick={navigateToGraphView}
-              disabled={loading}
-            >
-              {loading ? 'Loading...' : translations.chooseButton}
-            </button>
-          </div>
+  <h2 className="text-2xl font-bold mb-3">{translations.tableCard}</h2>
+  <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.tableDescription}</p>
+  
+  <div className="flex-grow flex items-center justify-center mb-6">
+    <PreviewOption title={translations.tablePreview} imageSrc="/table-preview.png" />
+  </div>
+  
+  <button 
+    className={`w-full py-2 px-4 rounded-lg transition-colors ${
+      loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
+    }`}
+    onClick={navigateToTableView}
+    disabled={loading}
+  >
+    {loading ? 'Loading...' : translations.chooseButton}
+  </button>
+</div>
+
+{/* Graph Visualization Card */}
+<div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg p-6 flex flex-col hover:shadow-xl transition-all">
+  <h2 className="text-2xl font-bold mb-3">{translations.graphCard}</h2>
+  <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.graphDescription}</p>
+  
+  <div className="flex-grow flex items-center justify-center mb-6">
+    <PreviewOption title={translations.graphPreview} imageSrc="/graph-preview.png" />
+  </div>
+  
+  <button 
+    className={`w-full py-2 px-4 rounded-lg transition-colors ${
+      loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
+    }`}
+    onClick={navigateToGraphView}
+    disabled={loading}
+  >
+    {loading ? 'Loading...' : translations.chooseButton}
+  </button>
+</div>
         </div>
       </main>
       

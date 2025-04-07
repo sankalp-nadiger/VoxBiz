@@ -224,8 +224,14 @@ const Navbar = () => {
         />
       )}
              <div className="flex items-center gap-2">
-               <div className="size-6 rounded-full bg-gradient-to-br from-violet-500 to-pink-500" />
-               <h1 className="text-xs font-bold" style={{ fontSize: '1.4rem', lineHeight: '0.85rem' }}>VoxBiz</h1>
+             <img 
+  src="/Navlogo.png" 
+  alt="Logo" 
+  className="size-8 rounded-full object-cover transition-transform duration-300 hover:scale-125" 
+/>
+<h1 className="text-2xl font-bold flex items-center whitespace-nowrap" style={{ fontSize: '1.7rem', lineHeight: '1.5rem' }}>
+  Vox<span className="bg-gradient-to-br from-violet-500 to-pink-500 text-transparent bg-clip-text">Biz</span>
+</h1>
              </div>
            </div>
            
