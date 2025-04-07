@@ -597,7 +597,7 @@ const createSmokeEffect = () => {
   const createLogoPopup = () => {
     // plane for the logo
     const logoGeometry = new THREE.PlaneGeometry(2, 2);
-    const logoTexture = new THREE.TextureLoader().load('/voxlogo.png');
+    const logoTexture = new THREE.TextureLoader().load('/voxlogo3.png');
     const logoMaterial = new THREE.MeshBasicMaterial({
       map: logoTexture,
       transparent: true,

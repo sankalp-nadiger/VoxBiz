@@ -24,7 +24,6 @@ const DatabaseDashboard = () => {
     readWrite: 'Read & Write'
   });
 
-  // Fetch database list from API
   const fetchDatabases = async () => {
     setIsLoading(true);
     setError(null);
@@ -167,23 +166,25 @@ setDatabases(data);
 
   const navigateToDatabase = async (dbId) => {
     try {
+      // Save dbId to localStorage
+      localStorage.setItem('selectedDbId', dbId);
+  
       // Fetch database info from the backend
       const response = await fetch(`http://localhost:8000/api/db-info/${dbId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch database information');
       }
-      
+  
       const dbInfo = await response.json();
-      
+  
       // Navigate to the database page with the database info
       navigate(`/database/${dbId}`, { state: { dbInfo } });
     } catch (error) {
       console.error('Error navigating to database:', error);
-      // Show error notification
-      // ...
     }
   };
+  
   
   // Voice Search Modal Component
   const VoiceSearchModal = ({ darkMode, onClose, onDatabaseFound, databases }) => {
