@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -71,4 +69,3 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
->>>>>>> 8f9aef2 (auth and dblisting update)
