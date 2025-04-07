@@ -7,7 +7,7 @@ const ForgotPassword = ({ theme }) => {
   const [step, setStep] = useState(1); // Step 1: Enter email, Step 2: Enter code, Step 3: Reset password
 
   const handleSendCode = async () => {
-    const response = await fetch('/api/auth/send-reset-code', {
+    const response = await fetch('http://localhost:3000/api/auth/send-reset-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -21,7 +21,7 @@ const ForgotPassword = ({ theme }) => {
   };
 
   const handleVerifyCode = async () => {
-    const response = await fetch('/api/auth/verify-reset-code', {
+    const response = await fetch('http://localhost:3000/api/auth/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, code }),
@@ -35,7 +35,7 @@ const ForgotPassword = ({ theme }) => {
   };
 
   const handleResetPassword = async () => {
-    const response = await fetch('/api/auth/reset-password', {
+    const response = await fetch('http://localhost:3000/api/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, code, newPassword }),

@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import CreateDatabaseModal from "../components/CreateDatabaseModal";
 import ConnectDatabaseModal from "../components/ConnectDatabaseModal";
+
 const DatabaseDashboard = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [databases, setDatabases] = useState([]);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [translations, setTranslations] = useState({
     title: 'Your Databases',
     createButton: 'Create Database',
@@ -20,6 +23,39 @@ const DatabaseDashboard = () => {
     readOnly: 'Read Only',
     readWrite: 'Read & Write'
   });
+
+  // Fetch database list from API
+  const fetchDatabases = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/database/list', {
+        method: 'GET',
+        credentials: 'include', // ✅ this is critical for cookies to be sent
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch databases: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+if (!Array.isArray(data)) {
+  throw new Error('Unexpected response format');
+}
+setDatabases(data);
+    } catch (err) {
+      console.error('Error fetching databases:', err);
+      setError('Failed to load databases. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch of databases on component mount
+  useEffect(() => {
+    fetchDatabases();
+  }, []);
 
   // Initialize from localStorage on component mount
   useEffect(() => {
@@ -39,31 +75,6 @@ const DatabaseDashboard = () => {
         console.error('Error parsing stored translations:', error);
       }
     }
-    
-    // Mock database data
-    setDatabases([
-      { 
-        id: 1, 
-        name: 'Customer Records', 
-        type: 'SQL', 
-        accessLevel: 'read-write',
-        lastAccessed: '2025-03-30'
-      },
-      { 
-        id: 2, 
-        name: 'Analytics', 
-        type: 'NoSQL', 
-        accessLevel: 'read-only',
-        lastAccessed: '2025-03-28'
-      },
-      { 
-        id: 3, 
-        name: 'Product Catalog', 
-        type: 'SQL', 
-        accessLevel: 'read-write',
-        lastAccessed: '2025-03-31'
-      }
-    ]);
   }, []);
 
   // Listen for theme changes
@@ -116,9 +127,9 @@ const DatabaseDashboard = () => {
       lastAccessed: 'Last Accessed',
       readOnly: 'Read Only',
       readWrite: 'Read & Write',
-     voiceSearch : "Search by voice",
-    actions : "Actions",
-    queryDatabase :"Query database",
+      voiceSearch: "Search by voice",
+      actions: "Actions",
+      queryDatabase: "Query database",
     };
     
     // If there's a stored language, trigger a translation
@@ -144,10 +155,16 @@ const DatabaseDashboard = () => {
   const handleConnectDatabase = () => {
     setShowConnectModal(true);
   };
+  
   const handleVoiceSearch = () => {
     setShowVoiceModal(true);
   };
   
+  // Add database refresh on modal close to update list when new database is added or connected
+  const handleModalClose = () => {
+    fetchDatabases();
+  };
+
   const navigateToDatabase = async (dbId) => {
     try {
       // Fetch database info from the backend
@@ -298,12 +315,12 @@ const DatabaseDashboard = () => {
       <div className="flex-grow relative">
         {/* Background image */}
         <div 
-  className="absolute inset-0 bg-cover bg-center opacity-20 animate-subtle-motion" 
-  style={{ 
-    backgroundImage: "url('/db-bg.png')",
-    animation: "subtleFloat 15s ease-in-out infinite alternate"
-  }}
-/>
+          className="absolute inset-0 bg-cover bg-center opacity-20 animate-subtle-motion" 
+          style={{ 
+            backgroundImage: "url('/db-bg.png')",
+            animation: "subtleFloat 15s ease-in-out infinite alternate"
+          }}
+        />
         
         <div className="container mx-auto px-2 py-4 relative z-10">
           <div className="flex justify-between items-center mb-4">
@@ -312,31 +329,31 @@ const DatabaseDashboard = () => {
             <div className="flex items-center space-x-2">
               {/* Voice Search Button */}
               <div className="relative group">
-  <button
-    onClick={handleVoiceSearch}
-    className={`p-2 rounded-full ${
-      darkMode 
-        ? 'bg-purple-600 hover:bg-purple-700' 
-        : 'bg-purple-500 hover:bg-purple-600'
-    } text-white`}
-    title={translations.voiceSearch}
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-    </svg>
-  </button>
-  
-  {/* Tooltip that appears on hover */}
-  <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
-    darkMode ? 'bg-gray-700 text-white' : 'bg-gray-800 text-white'
-  }`}>
-    Select database to query
-    {/* Triangle pointer */}
-    <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent ${
-      darkMode ? 'border-t-gray-700' : 'border-t-gray-800'
-    }`}></div>
-  </div>
-</div>
+                <button
+                  onClick={handleVoiceSearch}
+                  className={`p-2 rounded-full ${
+                    darkMode 
+                      ? 'bg-purple-600 hover:bg-purple-700' 
+                      : 'bg-purple-500 hover:bg-purple-600'
+                  } text-white`}
+                  title={translations.voiceSearch}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                </button>
+                
+                {/* Tooltip that appears on hover */}
+                <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+                  darkMode ? 'bg-gray-700 text-white' : 'bg-gray-800 text-white'
+                }`}>
+                  Select database to query
+                  {/* Triangle pointer */}
+                  <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent ${
+                    darkMode ? 'border-t-gray-700' : 'border-t-gray-800'
+                  }`}></div>
+                </div>
+              </div>
               
               <button
                 onClick={handleCreateDatabase}
@@ -363,7 +380,22 @@ const DatabaseDashboard = () => {
           </div>
           
           <div className={`rounded-lg overflow-hidden shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            {databases.length > 0 ? (
+            {isLoading ? (
+              <div className="p-6 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-t-transparent border-b-transparent border-l-gray-300 border-r-gray-300"></div>
+                <p className="mt-2 text-sm">Loading databases...</p>
+              </div>
+            ) : error ? (
+              <div className="p-4 text-center text-red-500">
+                <p>{error}</p>
+                <button 
+                  onClick={fetchDatabases} 
+                  className="mt-2 text-sm underline hover:no-underline"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : databases.length > 0 ? (
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
                   <tr>
@@ -396,33 +428,33 @@ const DatabaseDashboard = () => {
                       </td>
                       <td className="px-3 py-2 text-xs whitespace-nowrap">{new Date(db.lastAccessed).toLocaleDateString()}</td>
                       <td className="px-3 py-2 text-xs whitespace-nowrap">
-  <div className="inline-block relative">
-    <button
-      onClick={() => navigateToDatabase(db.id)}
-      className={`p-1 rounded ${
-        darkMode 
-          ? 'bg-blue-600 hover:bg-blue-700' 
-          : 'bg-blue-500 hover:bg-blue-600'
-      } text-white group`}
-      title={translations.queryDatabase}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-      </svg>
-      
-      {/* Tooltip */}
-      <div className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs rounded whitespace-nowrap hidden group-hover:block z-50 ${
-        darkMode ? 'bg-gray-700 text-white' : 'bg-gray-800 text-white'
-      }`}>
-        Use to query
-        {/* Triangle pointer */}
-        <div className={`absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent ${
-          darkMode ? 'border-t-gray-700' : 'border-t-gray-800'
-        }`}></div>
-      </div>
-    </button>
-  </div>
-</td>
+                        <div className="inline-block relative">
+                          <button
+                            onClick={() => navigateToDatabase(db.id)}
+                            className={`p-1 rounded ${
+                              darkMode 
+                                ? 'bg-blue-600 hover:bg-blue-700' 
+                                : 'bg-blue-500 hover:bg-blue-600'
+                            } text-white group`}
+                            title={translations.queryDatabase}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                            
+                            {/* Tooltip */}
+                            <div className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs rounded whitespace-nowrap hidden group-hover:block z-50 ${
+                              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-800 text-white'
+                            }`}>
+                              Use to query
+                              {/* Triangle pointer */}
+                              <div className={`absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent ${
+                                darkMode ? 'border-t-gray-700' : 'border-t-gray-800'
+                              }`}></div>
+                            </div>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -437,14 +469,20 @@ const DatabaseDashboard = () => {
       {showCreateModal && (
         <CreateDatabaseModal 
           darkMode={darkMode}
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false);
+            handleModalClose();
+          }}
         />
       )}
   
       {showConnectModal && (
         <ConnectDatabaseModal 
           darkMode={darkMode}
-          onClose={() => setShowConnectModal(false)}
+          onClose={() => {
+            setShowConnectModal(false);
+            handleModalClose();
+          }}
         />
       )}
   
@@ -458,11 +496,10 @@ const DatabaseDashboard = () => {
         />
       )}
       <footer className="mt-auto py-4 text-center backdrop-blur-sm bg-white/30 dark:bg-black/30">
-        <p className="text-sm">© 2025 Data Visualization Platform</p>
+        <p className="text-sm">©️ 2025 Data Visualization Platform</p>
       </footer>
     </div>
   );
 };
-
 
 export default DatabaseDashboard;

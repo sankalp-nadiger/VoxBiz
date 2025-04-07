@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from "react-hot-toast";
 const Signin = () => {
   const navigate = useNavigate();
   // State for theme and language
@@ -148,13 +149,60 @@ const Signin = () => {
       [name]: value
     }));
   };
-
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Form submitted:', formData);
+  const handleGoogleSignIn = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/auth/google-url');
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url; // Redirect to Google OAuth
+      }
+    } catch (err) {
+      console.error("Google Sign-in Error:", err);
+      alert("Google Sign-in failed");
+    }
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    const { email, password } = formData;
+  
+    // Basic validation
+    if (!email || !password) {
+      toast.error("Please fill in all required fields", {
+        duration: 3000,
+      });
+      return;
+    }
+  
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include", // 🔥 Important: send cookies
+        body: JSON.stringify({ email, password })
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.message || "Something went wrong!");
+      }
+  
+      toast.success("Login successful!", { duration: 3000 });
+  
+      // No need to store token manually since it's in a cookie
+  
+      setFormData({ name: "", email: "", password: "" });
+      navigate("/main");
+  
+    } catch (error) {
+      console.error("Error:", error.message);
+      toast.error(error.message || "Login failed", { duration: 3000 });
+    }
+  };
   return (
     <div className={`flex min-h-screen w-screen ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Main container */}
@@ -295,13 +343,22 @@ const Signin = () => {
           <h1 className="text-4xl font-bold mb-2">{translations.title}</h1>
           <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} mb-8`}>{translations.subtitle}</p>
           
-          {/* Google Sign in Button */}
-          <button className={`flex items-center justify-center w-full border ${theme === 'dark' ? 'border-gray-600 text-gray-200 bg-gray-700' : 'border-blue-200 text-blue-700 bg-blue-50'} rounded-md py-2 px-4 mb-4 hover:opacity-90 transition-opacity`}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24">
-              <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" fill="#4285F4" />
-            </svg>
-            {translations.googleSignIn}
-          </button>
+          <button
+  onClick={handleGoogleSignIn}
+  className={`flex items-center justify-center w-full border ${
+    theme === 'dark'
+      ? 'border-gray-600 text-gray-200 bg-gray-700'
+      : 'border-blue-200 text-blue-700 bg-blue-50'
+  } rounded-md py-2 px-4 mb-4 hover:opacity-90 transition-opacity`}
+>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24">
+    <path
+      d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
+      fill="#4285F4"
+    />
+  </svg>
+  {translations.googleSignIn}
+</button>
           
           <div className="flex items-center justify-center my-4">
             <div className={`border-t ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300'} flex-grow`}></div>

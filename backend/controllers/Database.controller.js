@@ -8,15 +8,26 @@ export const createDatabase = async (req, res) => {
         const { databaseName, host, port, username, password, connectionURI } = req.body;
         const userId = req.user.id; // Extracted from Auth middleware
         
+        let finalURI = connectionURI;
+        let finalDBName = databaseName;
+
+        if (!finalURI && host && port && username && password && databaseName) {
+            finalURI = `postgres://${username}:${password}@${host}:${port}/${databaseName}`;
+        }
+
+        if (!finalDBName && finalURI) {
+            finalDBName = new URL(finalURI).pathname.slice(1);
+        }
+
         // Assign 'owner' role when creating a new database
         const database = await Database.create({
             userId,
-            databaseName,
+            databaseName: finalDBName,
             host,
             port,
             username,
             password,
-            connectionURI,
+            connectionURI: finalURI,
             role: "owner"
         });
 
@@ -29,38 +40,75 @@ export const createDatabase = async (req, res) => {
 // Connect to an existing database (read-only role)
 export const connectDatabase = async (req, res) => {
     try {
-        const { databaseName, connectionURI } = req.body;
-        const userId = req.user.id;
-
-        // Check if the user already has access to this database
-        const existingDatabase = await Database.findOne({
-            where: { userId, databaseName }
-        });
-
-        if (existingDatabase) {
-            return res.status(400).json({ error: "You have already connected this database" });
+      console.log("route hit ->>", req.user);
+      console.log("Body received ->", req.body);
+      
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: "Unauthorized: Missing user information" });
+      }
+  
+      const { databaseName, connectionURI } = req.body;
+      const userId = req.user.id;
+  
+      if (!connectionURI) {
+        return res.status(400).json({ error: "Missing connection URI" });
+      }
+  
+      let finalName = databaseName;
+      try {
+        if (!finalName) {
+          finalName = new URL(connectionURI).pathname.slice(1);
         }
-
-        // Assign 'read-only' role for connected databases
-        const database = await Database.create({
-            userId,
-            databaseName,
-            connectionURI,
-            role: "read-only"
-        });
-
-        res.status(201).json({ message: "Database connected successfully", database });
+      } catch (err) {
+        return res.status(400).json({ error: "Invalid connection URI format" });
+      }
+  
+      const existingDatabase = await Database.findOne({
+        where: { userId, databaseName: finalName }
+      });
+  
+      if (existingDatabase) {
+        return res.status(400).json({ error: "You have already connected this database" });
+      }
+  
+      const database = await Database.create({
+        userId,
+        databaseName: finalName,
+        connectionURI,
+        role: "read-only"
+      });
+  
+      res.status(201).json({
+        success: true,
+        message: "Database connected successfully",
+        database
+      });
     } catch (error) {
-        res.status(500).json({ error: "Failed to connect database" });
+      console.error("Failed to connect database:", error);
+      res.status(500).json({ error: "Failed to connect database" });
     }
-};
-
+  };
 // Get all databases for a user
 export const listDatabases = async (req, res) => {
     try {
         const userId = req.user.id;
-        const databases = await Database.findAll({ where: { userId } });
-        res.status(200).json({ databases });
+        console.log("Fetching databases for user:", userId);
+        const databases = await Database.findAll({
+            where: { userId: req.user.id }
+          });
+          
+          const plainDatabases = databases.map(db => {
+              const { id, databaseName, role, updatedAt } = db.get({ plain: true });
+              return {
+                  id,
+                  name: databaseName,
+                  accessLevel: role,
+                  lastAccessed: updatedAt
+              };
+          });
+         
+        console.log("Databases found:", databases);
+        res.status(200).json(plainDatabases);
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch databases" });
     }

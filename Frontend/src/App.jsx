@@ -14,6 +14,8 @@ import VisualizationChoicePage from "./pages/VisChoice";
 import DataTable from "./pages/Table";
 import DatabaseRulesManager from "./pages/RuleManage";
 import ForgotPassword from "./components/ForgotPwd";
+import GoogleCallback from "./components/GoogleCallback";
+
 const App = () => {
   return (
     <Router>
@@ -32,6 +34,7 @@ const App = () => {
         <Route path="/database:id" element={<DatabaseDetailsPage/>}/>
         <Route path="/rulemanage" element={<DatabaseRulesManager/>}/>
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/google/callback" element={<GoogleCallback />} />
       </Routes>
     </Router>
   );

@@ -21,22 +21,6 @@ const Database = sequelize.define("Database", {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    host: {
-        type: DataTypes.STRING, // Used for local DB connections
-        allowNull: true,
-    },
-    port: {
-        type: DataTypes.INTEGER, // Used for local DB connections
-        allowNull: true,
-    },
-    username: {
-        type: DataTypes.STRING, // Used for local DB connections
-        allowNull: true,
-    },
-    password: {
-        type: DataTypes.STRING, // Used for local DB connections
-        allowNull: true,
-    },
     connectionURI: {
         type: DataTypes.STRING, // Used for cloud DB connections
         allowNull: true,

@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { TypewriterEffectSmooth } from './ui/TypeWriterEffect';
+import { Link, useNavigate } from "react-router-dom";
+
+
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -8,6 +11,7 @@ const SignUp = () => {
     email: '',
     mobile: ''
   });
+  const navigateTo = useNavigate();
   
   const [theme, setTheme] = useState('light');
   const [language, setLanguage] = useState('english');
@@ -241,7 +245,7 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5173/api/auth/register', { // Replace with your backend API endpoint
+      const response = await fetch('http://localhost:3000/api/auth/register', { // Replace with your backend API endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -256,6 +260,7 @@ const SignUp = () => {
           text: "Your account has been created successfully!", 
           type: 'assistant' 
         }]);
+        navigateTo('/main'); // Redirect to main page after successful registration
       } else {
         console.error('Registration failed:', response.statusText);
         setMessages(prev => [...prev, { 

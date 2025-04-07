@@ -4,11 +4,14 @@ import axios from "axios";
 
 const ConnectDatabaseModal = ({ darkMode, onClose }) => {
   const [step, setStep] = useState("info");
+  const [connectionMethod, setConnectionMethod] = useState("connectionString");
   const [formData, setFormData] = useState({
     dbName: "",
     connectionString: "",
     username: "",
     password: "",
+    host: "localhost",
+    port: "5432",
   });
   const [error, setError] = useState("");
 
@@ -17,23 +20,50 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleConnectionMethodChange = (method) => {
+    setConnectionMethod(method);
+  };
+
   const submitForm = async (e) => {
     e.preventDefault();
     setStep("loading");
-    
+  
+    let dataToSubmit = {
+      databaseName: formData.dbName,
+      connectionURI: formData.connectionString
+    };
+  
+    // If using credentials method, build connection string
+    if (connectionMethod === "credentials") {
+      dataToSubmit.connectionURI = `postgresql://${formData.username}:${formData.password}@${formData.host}:${formData.port}/${formData.dbName}`;
+    }
+  
     try {
-      const response = await axios.post("http://localhost:8000/api/database/connect", formData);
-      
-      if (response.data && response.data.success) {
+      const response = await axios.post("http://localhost:3000/api/database/connect", dataToSubmit, {
+        withCredentials: true
+      });
+  
+      if (response.status === 201) {
         setStep("success");
       } else {
-        setError(response.data.message || "Failed to connect to database.");
+        setError(response.data.error || "Failed to connect to database.");
         setStep("error");
       }
     } catch (error) {
       console.error("Error connecting to database:", error);
-      setError(error.response?.data?.message || "Failed to connect to database. Please check your credentials.");
+      setError(
+        error.response?.data?.error || "Failed to connect to database. Please check your credentials."
+      );
       setStep("error");
+    }
+  };
+  const isFormValid = () => {
+    if (!formData.dbName) return false;
+    
+    if (connectionMethod === "connectionString") {
+      return !!formData.connectionString;
+    } else {
+      return !!formData.username && !!formData.password && !!formData.host;
     }
   };
 
@@ -57,18 +87,18 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
               <h3 className="font-bold mb-2">Important Information</h3>
               <p className="mb-2">Please ensure you have the following information ready:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Database name</li>
-                <li>PostgreSQL connection string</li>
-                <li>Database username and password</li>
+                <li>Database name (required)</li>
+                <li>PostgreSQL connection string OR</li>
+                <li>Database credentials (username, password, host)</li>
               </ul>
               <p className="mt-2 text-sm">
-                To obtain these from PostgreSQL:
-                <ol className="list-decimal list-inside mt-1 ml-2">
-                  <li>Login to your PostgreSQL admin panel</li>
-                  <li>Locate your existing database</li>
-                  <li>Get the connection credentials</li>
-                </ol>
-              </p>
+  To obtain these from PostgreSQL:
+</p>
+<ol className="list-decimal list-inside mt-1 ml-4 text-sm">
+  <li>Login to your PostgreSQL admin panel</li>
+  <li>Locate your existing database</li>
+  <li>Get the connection credentials</li>
+</ol>
             </div>
             <button
               onClick={() => setStep("form")}
@@ -83,7 +113,7 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
           <form onSubmit={submitForm}>
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-sm font-medium mb-1">Database Name</label>
+                <label className="block text-sm font-medium mb-1">Database Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   name="dbName"
@@ -93,45 +123,102 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
                   className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Connection String</label>
-                <input
-                  type="text"
-                  name="connectionString"
-                  value={formData.connectionString}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="postgresql://username:password@host:port/database"
-                  className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
-                />
+              
+              <div className="flex items-center space-x-4 border-b pb-4 mb-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="connectionMethod"
+                    checked={connectionMethod === "connectionString"}
+                    onChange={() => handleConnectionMethodChange("connectionString")}
+                    className="mr-2"
+                  />
+                  <span>Connection String</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="connectionMethod"
+                    checked={connectionMethod === "credentials"}
+                    onChange={() => handleConnectionMethodChange("credentials")}
+                    className="mr-2"
+                  />
+                  <span>Credentials</span>
+                </label>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  required
-                  className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
-                />
-              </div>
+
+              {connectionMethod === "connectionString" ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Connection String <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    name="connectionString"
+                    value={formData.connectionString}
+                    onChange={handleInputChange}
+                    required={connectionMethod === "connectionString"}
+                    placeholder="postgresql://username:password@host:port/database"
+                    className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Username <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      required={connectionMethod === "credentials"}
+                      className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Password <span className="text-red-500">*</span></label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required={connectionMethod === "credentials"}
+                      className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Host <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      name="host"
+                      value={formData.host}
+                      onChange={handleInputChange}
+                      required={connectionMethod === "credentials"}
+                      placeholder="localhost"
+                      className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Port</label>
+                    <input
+                      type="text"
+                      name="port"
+                      value={formData.port}
+                      onChange={handleInputChange}
+                      placeholder="5432"
+                      className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                    />
+                  </div>
+                </>
+              )}
             </div>
             
             <button
               type="submit"
-              className={`w-full py-2 rounded-lg ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+              disabled={!isFormValid()}
+              className={`w-full py-2 rounded-lg ${
+                isFormValid() 
+                  ? darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+                  : 'bg-gray-400 cursor-not-allowed'
+              } text-white`}
             >
               Connect
             </button>
