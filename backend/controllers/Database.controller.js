@@ -1,7 +1,7 @@
 import Database from "../models/Database.model.js";
 import User from "../models/User.model.js";
 import { Sequelize } from "sequelize";
-import db from '../config/Database.config.js'; // your pg client instance
+import sequelize from '../config/Database.config.js'; // your pg client instance
 import { differenceInDays } from 'date-fns';
 
 // Create a new database entry
@@ -118,63 +118,97 @@ export const listDatabases = async (req, res) => {
 
 
 
+
+
 export const getDatabaseInfo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Basic validation (assuming UUID)
     if (!id || id.length < 8) {
       return res.status(400).json({ success: false, message: 'Invalid database ID' });
     }
 
-    // Dates
     const now = new Date();
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(now.getDate() - 7);
 
-    // Fetch logs for this DB
-    const { rows: logs } = await db.query(
+    const dbRecord = await Database.findByPk(id);
+    console.log("DB Record ->>", dbRecord);
+
+    if (!dbRecord) {
+      return res.status(404).json({ success: false, message: 'Database not found' });
+    }
+
+    const logs = await sequelize.query(
       `SELECT success, response_time, timestamp 
        FROM query_logs 
-       WHERE database_id = $1`,
-      [id]
-    );
-
-    const totalQueries = logs.length;
-    const successfulQueries = logs.filter(log => log.success).length;
-    const avgResponseTime = totalQueries
-      ? (logs.reduce((sum, log) => sum + parseFloat(log.response_time), 0) / totalQueries).toFixed(2)
-      : 0;
-    const successRate = totalQueries ? ((successfulQueries / totalQueries) * 100).toFixed(1) : 0;
-
-    // Last 7 days logs only
-    const last7DaysLogs = logs.filter(
-      log => new Date(log.timestamp) >= sevenDaysAgo
-    );
-
-    const dailyCounts = Array(7).fill(0);
-    last7DaysLogs.forEach(log => {
-      const dayDiff = differenceInDays(now, new Date(log.timestamp));
-      if (dayDiff < 7) {
-        dailyCounts[6 - dayDiff] += 1;
+       WHERE database_id = :id`,
+      {
+        replacements: { id },
+        type: sequelize.QueryTypes.SELECT
       }
-    });
+    );
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        totalQueries,
-        successRate,
-        avgResponseTime: `${avgResponseTime}s`,
-        queryFrequency: dailyCounts,
-      },
-    });
+    let totalQueries = 0;
+    let successRate = "0%";
+    let avgResponseTime = "0s";
+    let lastQueried = null;
+    let queryFrequency = Array(7).fill(0);
+
+    if (logs && logs.length > 0) {
+      totalQueries = logs.length;
+      const successfulQueries = logs.filter(log => log.success).length;
+      avgResponseTime = (
+        logs.reduce((sum, log) => sum + parseFloat(log.response_time || 0), 0) / totalQueries
+      ).toFixed(2);
+      successRate = ((successfulQueries / totalQueries) * 100).toFixed(1) + '%';
+
+      lastQueried = logs.reduce((latest, log) => {
+        const ts = new Date(log.timestamp);
+        return ts > latest ? ts : latest;
+      }, new Date(0));
+
+      const last7DaysLogs = logs.filter(
+        log => new Date(log.timestamp) >= sevenDaysAgo
+      );
+
+      last7DaysLogs.forEach(log => {
+        const dayDiff = differenceInDays(now, new Date(log.timestamp));
+        if (dayDiff < 7) {
+          queryFrequency[6 - dayDiff] += 1;
+        }
+      });
+    }
+
+    const tableResult = await sequelize.query(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema='public'`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    const tables = tableResult.map(row => row.table_name);
+
+    // ✅ Compose dbInfo object tailored for frontend
+    const dbInfo = {
+      id: dbRecord.id,
+      name: dbRecord.databaseName,
+      type: dbRecord.dbType || 'PostgreSQL',
+      status: 'Connected',
+      lastAccessed: lastQueried || dbRecord.updatedAt,
+      connectionString: dbRecord.connectionURI,
+      permissions: dbRecord.role || 'read-only',
+      createdAt: dbRecord.createdAt,
+      totalQueries,
+      successRate,
+      avgResponseTime: `${avgResponseTime}`,
+      queryFrequency,
+      tables
+    };
+
+    return res.status(200).json(dbInfo);
   } catch (error) {
     console.error('Error in getDatabaseInfo:', error);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 };
-
 // Disconnect a database (only if it's not owned by the user)
 export const disconnectDatabase = async (req, res) => {
     try {

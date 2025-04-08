@@ -4,6 +4,6 @@ import AuthUser from "../middleware/AuthUser.js";
 
 const router = express.Router();
 
-router.post("/process", AuthUser, processQuery);
+router.post("/process/:databaseId", AuthUser, processQuery);
 
 export default router;

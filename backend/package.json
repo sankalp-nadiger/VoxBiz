@@ -11,6 +11,7 @@
   "author": "ritheshn",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.24.0",
     "axios": "^1.8.4",
     "bcryptjs": "^3.0.2",
     "chartjs-node-canvas": "^5.0.0",

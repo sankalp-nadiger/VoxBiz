@@ -4,7 +4,7 @@ import fastapi
 import os
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict,Optional, Any
 import requests
 from dotenv import load_dotenv
 
@@ -34,8 +34,14 @@ class QueryRequest(BaseModel):
     query: str
     schema: List[Dict[str, Any]]
 
+class QueryResponse(BaseModel):
+    query: Optional[str] = None  # generated SQL query
+    result: Optional[Any] = None  # result from DB execution (optional)
+    success: bool
+    error: Optional[str] = None
+
 # PostgreSQL schema retrieval endpoint (Node.js backend)
-NODE_BACKEND_URL = "https://your-node-backend.onrender.com"
+NODE_BACKEND_URL = "http://localhost:3000"  # Change to your Node.js backend URL
 
 def fetch_database_schema():
     try:
@@ -84,7 +90,7 @@ class LanguageProcessor:
         """
         # Simplified language detection with expanded language support
         english_words = {'show', 'get', 'list', 'find', 'what', 'which', 'orders', 'customers', 'products'}
-        spanish_words = {'mostrar', 'obtener', 'listar', 'encontrar', 'qué', 'cual', 'pedidos', 'clientes', 'productos'}
+
         hindi_words = {'दिखाओ', 'प्राप्त', 'सूची', 'खोजें', 'क्या', 'कौन', 'आदेश', 'ग्राहक', 'उत्पाद'}
         kannada_words = {'ತೋರಿಸು', 'ಪಡೆ', 'ಪಟ್ಟಿ', 'ಹುಡುಕು', 'ಏನು', 'ಯಾವ', 'ಆದೇಶಗಳು', 'ಗ್ರಾಹಕರು', 'ಉತ್ಪನ್ನಗಳು'}
         
@@ -92,7 +98,6 @@ class LanguageProcessor:
         tokens = set(text_lower.split())
         
         eng_count = len(tokens.intersection(english_words))
-        spa_count = len(tokens.intersection(spanish_words))
         hindi_count = len(tokens.intersection(hindi_words))
         kannada_count = len(tokens.intersection(kannada_words))
         
@@ -104,12 +109,10 @@ class LanguageProcessor:
             return "hi"  # Hindi
         elif kannada_pattern.search(text):
             return "kn"  # Kannada
-        elif hindi_count > eng_count and hindi_count > spa_count and hindi_count > kannada_count:
+        elif hindi_count > eng_count  and hindi_count > kannada_count:
             return "hi"
-        elif kannada_count > eng_count and kannada_count > spa_count and kannada_count > hindi_count:
+        elif kannada_count > eng_count  and kannada_count > hindi_count:
             return "kn"
-        elif spa_count > eng_count:
-            return "es"
         return "en"  # Default to English
     
     def translate_to_english(self, text, source_lang):

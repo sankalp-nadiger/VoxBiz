@@ -109,7 +109,7 @@ If you don't understand a query or need more information, ask clarifying questio
     }
   
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BASE_API_URL}/api/business-chat`, {
+      const response = await axios.post("http://localhost:3000/api/business-chat", {
         message: userMessage,
         systemPrompt: SYSTEM_PROMPT,
         currentVisualization: visualizationType,

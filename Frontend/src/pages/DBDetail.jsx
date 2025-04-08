@@ -4,8 +4,12 @@ import Loader from '../components/ui/Loader';
 import { Mic, Edit, Save, Database, Key, Lock, Cog } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import VoiceSearchModal from '../components/VoiceSearchModal';
+import { useLocation } from 'react-router-dom';
 
-const DatabaseDetailsPage = ({ dbInfo })=> {
+const DatabaseDetailsPage = ( )=> {
+
+  const location = useLocation();
+  const dbInfo = location.state?.dbInfo;
   // Static database data for testing
   const [database, setDatabase] = useState({
     id: '',
@@ -16,7 +20,7 @@ const DatabaseDetailsPage = ({ dbInfo })=> {
   });
   const [credentials, setCredentials] = useState({
     connectionString: '',
-    permissions: 'readWrite'
+    permissions: 'readOnly'
   });
   
   const [loading, setLoading] = useState(false);
@@ -30,20 +34,20 @@ const DatabaseDetailsPage = ({ dbInfo })=> {
   const [translations, setTranslations] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   useEffect(() => {
-    if (dbInfo) {
+    console.log("Database Info:", dbInfo);
       setDatabase({
-        id: dbInfo.id || '123',
-        name: dbInfo.name || 'Production MySQL',
-        type: dbInfo.type || 'MySQL',
-        status: dbInfo.status || 'Connected',
-        lastAccessed: dbInfo.lastAccessed || '2025-04-01'
+        id: dbInfo?.id || '123',
+        name: dbInfo?.name || 'Production MySQL',
+        type: dbInfo?.type || 'MySQL',
+        status: dbInfo?.status || 'Connected',
+        lastAccessed: dbInfo?.lastAccessed || '2025-04-01'
       });
       
       setCredentials({
-        connectionString: dbInfo.connectionString || 'mysql://user:pass@localhost:3306/mydb',
-        permissions: dbInfo.permissions || 'readOnly'
+        connectionString: dbInfo?.connectionString || 'mysql://user:pass@localhost:3306/mydb',
+        permissions: dbInfo?.permissions || 'readOnly'
       });
-    }
+   
   }, [dbInfo]);
 
   // Listen for theme changes
@@ -114,7 +118,6 @@ const DatabaseDetailsPage = ({ dbInfo })=> {
       totalQueries: "Total Queries",
       successRate: "Success Rate",
       avgResponseTime: "Avg Response Time",
-      ruleManager: "Rule Manager",
       manageRules: "Manage Database Rules"
     };
     
@@ -166,13 +169,28 @@ const DatabaseDetailsPage = ({ dbInfo })=> {
 
  const handleDatabaseQuery = (query) => {
     setProcessingVoice(true);
-    
+    const dbId = localStorage.getItem('dbId');
+    if (!dbId) {
+      console.error("Database ID not found in local storage");
+      setProcessingVoice(false);
+      setErrorMessage('Database ID not found. Please try again.');
+      return;
+    }
+    // Check if query is empty
+    if (!query) {
+      console.error("Query is empty");
+      setProcessingVoice(false);
+      setErrorMessage('Query cannot be empty. Please try again.');
+      return;
+    }
     // Make an API call to the backend database service
-    fetch('http://localhost:8000/api/database/query', {
+    fetch(`http://localhost:3000/api/query/process/${dbId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies for authentication
+
       body: JSON.stringify({ query }),
     })
       .then(response => {
@@ -270,7 +288,7 @@ const DatabaseDetailsPage = ({ dbInfo })=> {
               </div>
               
               {/* Rule Manager Button - Only show if user has read-write permissions */}
-              {credentials.permissions === 'readWrite' && (
+              
                 <button
                   onClick={handleNavigateToRuleManager}
                   className="mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 flex items-center justify-center"
@@ -278,7 +296,7 @@ const DatabaseDetailsPage = ({ dbInfo })=> {
                   <Cog className="h-5 w-5 mr-2" />
                   {translations.manageRules}
                 </button>
-              )}
+              
             </div>
           </div>
         </div>
@@ -293,17 +311,7 @@ const DatabaseDetailsPage = ({ dbInfo })=> {
                 {database.type} • {database.lastAccessed}
               </p>
             </div>
-            
-            {/* Rule Manager Button - Alternative position, only show if user has read-write permissions */}
-            {credentials.permissions === 'readWrite' && (
-              <button
-                onClick={handleNavigateToRuleManager}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 flex items-center justify-center"
-              >
-                <Cog className="h-5 w-5 mr-2" />
-                {translations.ruleManager}
-              </button>
-            )}
+
           </div>
 
           {/* Voice Query Section */}
@@ -338,82 +346,70 @@ const DatabaseDetailsPage = ({ dbInfo })=> {
           </div>
 
           {/* Performance Analytics Card */}
-          <div className="group relative flex w-full mb-8 flex-col rounded-xl bg-slate-950 p-4 shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-indigo-500/20">
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-sm transition-opacity duration-300 group-hover:opacity-30" />
-            <div className="absolute inset-px rounded-[11px] bg-slate-950" />
-            <div className="relative">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500">
-                    <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                  </div>
-                  <h3 className="text-sm font-semibold text-white">{translations.interactions}</h3>
-                </div>
-                <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-500">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Live
-                </span>
-              </div>
-              <div className="mb-4 grid grid-cols-3 gap-4">
-                <div className="rounded-lg bg-slate-900/50 p-3">
-                  <p className="text-xs font-medium text-slate-400">{translations.totalQueries}</p>
-                  <p className="text-lg font-semibold text-white">3.4K</p>
-                  <span className="text-xs font-medium text-emerald-500">+15.6%</span>
-                </div>
-                <div className="rounded-lg bg-slate-900/50 p-3">
-                  <p className="text-xs font-medium text-slate-400">{translations.successRate}</p>
-                  <p className="text-lg font-semibold text-white">92.3%</p>
-                  <span className="text-xs font-medium text-emerald-500">+3.2%</span>
-                </div>
-                <div className="rounded-lg bg-slate-900/50 p-3">
-                  <p className="text-xs font-medium text-slate-400">{translations.avgResponseTime}</p>
-                  <p className="text-lg font-semibold text-white">1.2s</p>
-                  <span className="text-xs font-medium text-emerald-500">-0.3s</span>
-                </div>
-              </div>
-              <div className="mb-4 h-24 w-full overflow-hidden rounded-lg bg-slate-900/50 p-3">
-                <div className="flex h-full w-full items-end justify-between gap-1">
-                  <div className="h-2/5 w-3 rounded-sm bg-indigo-500/30">
-                    <div className="h-3/5 w-full rounded-sm bg-indigo-500 transition-all duration-300" />
-                  </div>
-                  <div className="h-3/5 w-3 rounded-sm bg-indigo-500/30">
-                    <div className="h-2/5 w-full rounded-sm bg-indigo-500 transition-all duration-300" />
-                  </div>
-                  <div className="h-3/4 w-3 rounded-sm bg-indigo-500/30">
-                    <div className="h-4/5 w-full rounded-sm bg-indigo-500 transition-all duration-300" />
-                  </div>
-                  <div className="h-2/5 w-3 rounded-sm bg-indigo-500/30">
-                    <div className="h-1/2 w-full rounded-sm bg-indigo-500 transition-all duration-300" />
-                  </div>
-                  <div className="h-4/5 w-3 rounded-sm bg-indigo-500/30">
-                    <div className="h-full w-full rounded-sm bg-indigo-500 transition-all duration-300" />
-                  </div>
-                  <div className="h-3/5 w-3 rounded-sm bg-indigo-500/30">
-                    <div className="h-4/5 w-full rounded-sm bg-indigo-500 transition-all duration-300" />
-                  </div>
-                  <div className="h-4/5 w-3 rounded-sm bg-indigo-500/30">
-                    <div className="h-4/5 w-full rounded-sm bg-indigo-500 transition-all duration-300" />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-400">Last 7 days</span>
-                  <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                <button className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-medium text-white transition-all duration-300 hover:from-indigo-600 hover:to-purple-600">
-                  View Details
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+          {dbInfo && (
+  <div className="group relative flex w-full mb-8 flex-col rounded-xl bg-slate-950 p-4 shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-indigo-500/20">
+    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-sm transition-opacity duration-300 group-hover:opacity-30" />
+    <div className="absolute inset-px rounded-[11px] bg-slate-950" />
+    <div className="relative">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500">
+            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
           </div>
+          <h3 className="text-sm font-semibold text-white">Interactions</h3>
+        </div>
+        <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-500">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          Live
+        </span>
+      </div>
+
+      <div className="mb-4 grid grid-cols-3 gap-4">
+        <div className="rounded-lg bg-slate-900/50 p-3">
+          <p className="text-xs font-medium text-slate-400">Total Queries</p>
+          <p className="text-lg font-semibold text-white">{dbInfo.totalQueries}</p>
+        </div>
+        <div className="rounded-lg bg-slate-900/50 p-3">
+          <p className="text-xs font-medium text-slate-400">Success Rate</p>
+          <p className="text-lg font-semibold text-white">{dbInfo.successRate}</p>
+        </div>
+        <div className="rounded-lg bg-slate-900/50 p-3">
+          <p className="text-xs font-medium text-slate-400">Avg Response Time</p>
+          <p className="text-lg font-semibold text-white">{dbInfo.avgResponseTime}</p>
+        </div>
+      </div>
+
+      <div className="mb-4 h-24 w-full overflow-hidden rounded-lg bg-slate-900/50 p-3">
+        <div className="flex h-full w-full items-end justify-between gap-1">
+          {dbInfo.queryFrequency?.map((count, index) => {
+            const max = Math.max(...dbInfo.queryFrequency);
+            const height = (count / max) * 100;
+            return (
+              <div key={index} className="w-3 rounded-sm bg-indigo-500/30">
+                <div
+                  className="w-full rounded-sm bg-indigo-500 transition-all duration-300"
+                  style={{ height: `${height}%` }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-slate-400">Last 7 days</span>
+        <button className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-medium text-white transition-all duration-300 hover:from-indigo-600 hover:to-purple-600">
+          View Details
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
           {processingVoice && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">

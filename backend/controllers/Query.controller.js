@@ -1,43 +1,52 @@
 import Database from "../models/Database.model.js";
-import { convertToSQL } from "../services/FastAPIClient.js";
 import { executeQuery } from "../services/DatabaseService.js";
 
 /**
- * Handles voice-based SQL queries.
+ * Handles voice-based SQL queries (currently using a hardcoded SQL query).
  */
 export const processQuery = async (req, res) => {
-    try {
-        const { userId } = req.user; // Extract user ID from authentication
-        const { databaseId, naturalQuery } = req.body; // User's selected DB & query
+  try {
+    const  userId  = req.user.id;
+    console.log("🔹 User ID:", userId);
+    const { databaseId } = req.params;
 
-        // 🔹 Step 1: Check if the user is connected to the database
-        const dbEntry = await Database.findOne({ where: { id: databaseId, userId } });
+    // Step 1: Check if the user is connected to the database
+    const dbEntry = await Database.findOne({
+      where: { id: databaseId, userId },
+    });
 
-        if (!dbEntry) {
-            return res.status(403).json({ error: "You are not connected to this database." });
-        }
-
-        // 🔹 Step 2: Convert natural language query to SQL
-        const sqlQuery = await convertToSQL(naturalQuery, dbEntry.databaseName);
-
-        if (!sqlQuery) {
-            return res.status(400).json({ error: "Failed to generate SQL query." });
-        }
-
-        console.log(`🔹 Generated SQL: ${sqlQuery}`);
-
-        // 🔹 Step 3: Restrict queries based on user role
-        if (dbEntry.role === "read-only" && sqlQuery.toLowerCase().startsWith("insert")) {
-            return res.status(403).json({ error: "You do not have permission to modify data." });
-        }
-
-        // 🔹 Step 4: Execute the SQL query
-        const result = await executeQuery(dbEntry, sqlQuery);
-
-        return res.status(200).json({ success: true, data: result });
-
-    } catch (error) {
-        console.error("❌ Query processing error:", error);
-        return res.status(500).json({ error: "Internal server error." });
+    if (!dbEntry) {
+      return res
+        .status(403)
+        .json({ error: "You are not connected to this database." });
     }
+
+    // Step 2: Hardcoded SQL query for visualization (orders per category)
+    const sqlQuery = `
+  SELECT 
+    p.category AS category, 
+    COUNT(o.order_id) AS total_orders
+  FROM 
+    orders o
+  JOIN 
+    order_items oi ON o.order_id = oi.order_id
+  JOIN 
+    products p ON oi.product_id = p.product_id
+  GROUP BY 
+    p.category
+  ORDER BY 
+    total_orders DESC;
+`;
+
+    console.log("🔹 Running hardcoded SQL:", sqlQuery);
+
+    // Step 3: Execute the SQL query
+    const result = await executeQuery(dbEntry, sqlQuery);
+
+    // Step 4: Send response to frontend
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    console.error("❌ Hardcoded query error:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
 };

@@ -7,6 +7,8 @@ import queryRoutes from "./routes/Query.route.js";
 import visualizationRoutes from "./routes/Visualization.route.js";
 import sequelize from "./config/Database.config.js";
 import cookieParser from "cookie-parser";
+import QueryLog from "./models/QueryLog.model.js"; // <-- important to import!
+import ChatBotRoutes from "./routes/ChatBot.route.js";
 
 // sequelize.sync({ alter: true })
 //   .then(() => console.log("DB synced with altered schema"))
@@ -29,11 +31,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/database", databaseRoutes);
 app.use("/api/query", queryRoutes);
 app.use("/api/visualization", visualizationRoutes);
+app.use('/api', ChatBotRoutes);
 
-// Database connection
-// sequelize.sync({ alter: true }) // Ensure DB is in sync
-//     .then(() => console.log("✅ Database connected successfully"))
-//     .catch((err) => console.error("❌ Database connection error:", err));
+
 
 // Start the server
 const PORT = process.env.PORT  ;
