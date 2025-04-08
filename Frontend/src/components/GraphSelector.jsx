@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useRedirect } from './redirect';
+import { useNavigate } from 'react-router-dom';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-const GraphSelector = ({ data, onSelectGraph }) => {
-   const [darkMode, setDarkMode] = useState(false);
+const GraphSelector = ({ data, fullData, onSelectGraph }) => {
   const [recommendedGraph, setRecommendedGraph] = useState(null);
   const [graphOptions, setGraphOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const redirect = useRedirect();
-  const handleSelect = (event) => {
-    onSelectGraph(event.target.value);
-  };
+  const navigate = useNavigate();
+  
+  console.log("Data received:", fullData);
+  
   useEffect(() => {
     if (data && Array.isArray(data) && data.length > 0) {
       fetchGraphRecommendation();
@@ -28,39 +27,54 @@ const GraphSelector = ({ data, onSelectGraph }) => {
     
     try {
       const dataDescription = JSON.stringify(data, null, 2);
-
       const prompt = `
-Data sample:
-${dataDescription}
-
-Based on this dataset, recommend the best graph type for visualization.
-First, provide your primary recommendation as "Primary: [graph type]".
-Then, list 2-3 alternative graph options as "Alternative: [graph type]".
-Only include the graph type names from these options: bar, line, pie, area.
-`;
-
+  Data sample:
+  ${dataDescription}
+  Based on this dataset, recommend the best graph type for visualization.
+  First, provide your primary recommendation as "Primary: [graph type]".
+  Then, list 2-3 DIFFERENT alternative graph types as "Alternative: [graph type]".
+  Choose only from these exact graph types (do not modify or combine them): bar, line, pie, area, scatter, heatmap
+  `;
       const response = await axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
           contents: [{ parts: [{ text: prompt }] }]
         }
       );
-
       if (response.data.candidates?.length > 0) {
         const aiText = response.data.candidates[0].content.parts[0].text.trim();
-
-        const primaryMatch = aiText.match(/Primary: ([\w\s]+)/i);
-        const alternativeMatches = aiText.match(/Alternative: ([\w\s]+)/gi);
-
+        console.log("Raw AI response:", aiText);
+        
+        // Extract primary recommendation
+        const primaryMatch = aiText.match(/Primary:\s*(bar|line|pie|area|scatter|heatmap)/i);
+        const alternativeMatches = aiText.match(/Alternative:\s*(bar|line|pie|area|scatter|heatmap)/gi);
+        
         if (primaryMatch) {
-          setRecommendedGraph(primaryMatch[1].trim());
+          // Capitalize first letter of primary recommendation
+          const primaryType = primaryMatch[1].trim();
+          const capitalizedPrimary = primaryType.charAt(0).toUpperCase() + primaryType.slice(1);
+          setRecommendedGraph(capitalizedPrimary);
         }
-
+        
         if (alternativeMatches) {
-          const alternatives = alternativeMatches.map(match =>
-            match.replace(/Alternative: /i, "").trim()
+          // Extract and capitalize alternative options
+          const alternatives = alternativeMatches.map(match => {
+            const graphType = match.match(/(bar|line|pie|area|scatter|heatmap)/i);
+            if (graphType) {
+              const type = graphType[0].trim();
+              // Capitalize first letter
+              return type.charAt(0).toUpperCase() + type.slice(1);
+            }
+            return null;
+          }).filter(Boolean);
+          
+          // Filter out the primary recommendation from alternatives
+          const primaryLower = recommendedGraph?.toLowerCase();
+          const uniqueAlternatives = alternatives.filter(
+            alt => alt && alt.toLowerCase() !== primaryLower
           );
-          setGraphOptions(alternatives);
+          
+          setGraphOptions(uniqueAlternatives);
         }
       } else {
         setError("No recommendations received from AI. Please try again.");
@@ -69,8 +83,37 @@ Only include the graph type names from these options: bar, line, pie, area.
       console.error("Error:", error);
       setError("Failed to get graph recommendations. Please try again.");
     }
-
     setLoading(false);
+  };
+
+  const handleUseGraph = (graphType) => {
+    // Get the visualization data to pass
+    const visualizationData = fullData || data;
+    
+    // Ensure we have the correct graph type
+    const selectedGraph = graphType || recommendedGraph;
+    
+    // Notify parent component of selection if callback exists
+    if (onSelectGraph && typeof onSelectGraph === 'function') {
+      onSelectGraph(selectedGraph);
+    }
+    
+    // Store data in sessionStorage as backup
+    sessionStorage.setItem('chartData', JSON.stringify(visualizationData));
+    sessionStorage.setItem('graphType', selectedGraph);
+    
+    console.log("Navigating with data:", {
+      visualizationData,
+      selectedGraphType: selectedGraph
+    });
+    
+    // Navigate to render graph page with visualization data
+    navigate("/rendergraph", { 
+      state: { 
+        visualizationData,
+        selectedGraphType: selectedGraph
+      }
+    });
   };
 
   return (
@@ -84,45 +127,46 @@ Only include the graph type names from these options: bar, line, pie, area.
       />
   
       {/* Foreground UI box */}
-      <div className="relative z-10 bg-white bg-opacity-90 backdrop-blur-md p-8 rounded-lg shadow-2xl max-w-lg w-full  mx-auto w-fit">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">📊 AI-Recommended Graph</h2>
+      <div className="relative z-10 bg-white bg-opacity-90 backdrop-blur-md p-8 rounded-lg shadow-2xl max-w-3xl w-full mx-auto">
+        <h2 className="text-3xl font-bold text-gray-800 mb-6">📊 AI-Recommended Graph</h2>
   
         {loading ? (
-          <div className="flex items-center justify-center p-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            <span className="ml-3 text-gray-700 font-medium">Loading recommendations...</span>
+          <div className="flex items-center justify-center p-6">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
+            <span className="ml-4 text-gray-700 font-medium text-lg">Loading recommendations...</span>
           </div>
         ) : error ? (
-          <div className="text-red-600">
+          <div className="text-red-600 text-lg">
             <p>{error}</p>
             <button
-              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              className="mt-6 bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600 text-lg"
               onClick={fetchGraphRecommendation}
             >
               Retry
             </button>
           </div>
         ) : recommendedGraph ? (
-          <div>
-            <p className="mb-3 text-lg">
-              <span className="font-semibold text-green-700">Recommended Graph:</span> {recommendedGraph}
+          <div className="py-2">
+            <p className="mb-4 text-xl">
+              <span className="font-semibold text-green-700">Recommended Graph:</span>{" "}
+              <span className="text-gray-800">{recommendedGraph}</span>
             </p>
             <button
-              className="bg-green-600 text-white px-5 py-2 rounded hover:bg-green-700 transition"
-              onClick={() => redirect("/rendergraph")}
+              className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition text-lg"
+              onClick={() => handleUseGraph(recommendedGraph)}
             >
               Use This Graph
             </button>
   
             {graphOptions.length > 0 && (
-              <div className="mt-6">
-                <h3 className="font-semibold text-gray-800 mb-2">Alternative Options:</h3>
-                <div className="flex flex-wrap gap-2">
+              <div className="mt-8">
+                <h3 className="font-semibold text-gray-800 mb-3 text-xl">Alternative Options:</h3>
+                <div className="flex flex-wrap gap-3">
                   {graphOptions.map((graph, index) => (
                     <button
                       key={index}
-                      className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
-                      onClick={() => onSelectGraph(graph)}
+                      className="bg-gray-200 text-gray-800 px-5 py-2 rounded hover:bg-gray-300 text-lg"
+                      onClick={() => handleUseGraph(graph)}
                     >
                       {graph}
                     </button>
@@ -132,10 +176,10 @@ Only include the graph type names from these options: bar, line, pie, area.
             )}
           </div>
         ) : (
-          <div>
-            <p className="text-gray-700 mb-3">Click the button below to get graph suggestions from AI.</p>
+          <div className="py-4">
+            <p className="text-gray-700 mb-5 text-lg">Click the button below to get graph suggestions from AI.</p>
             <button
-              className="bg-blue-500 text-white px-5 py-2 rounded hover:bg-blue-600"
+              className="bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600 text-lg"
               onClick={fetchGraphRecommendation}
             >
               Analyze Data
@@ -145,6 +189,6 @@ Only include the graph type names from these options: bar, line, pie, area.
       </div>
     </div>
   );
-}  
+}
 
 export default GraphSelector;

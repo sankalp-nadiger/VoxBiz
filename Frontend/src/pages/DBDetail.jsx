@@ -191,8 +191,7 @@ const DatabaseDetailsPage = ( )=> {
         'Content-Type': 'application/json',
       },
       credentials: 'include', // Include cookies for authentication
-
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ transcript: query }) 
     })
       .then(response => {
         if (!response.ok) {

@@ -3,7 +3,7 @@ import axios from "axios";
 import Navbar from './Navbar';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LabelList, ScatterChart,
   Scatter } from "recharts";
-
+import { useLocation } from "react-router-dom";
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // Sample data for query history (will be replaced with actual data from backend)
@@ -23,8 +23,18 @@ const COLOR_PALETTES = [
   { name: "Dark", colors: ['#424242', '#616161', '#757575', '#9e9e9e', '#bdbdbd'] }
 ];
 
+// API base URL - make sure this is defined
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3s000';
+
 const Graphrender = () => {
-  const [graphType, setGraphType] = useState("line");
+  const location = useLocation();
+  
+  // Initialize graphType from location state if available
+  const [graphType, setGraphType] = useState(
+    location.state?.selectedGraphType 
+      ? location.state.selectedGraphType.charAt(0).toLowerCase() + location.state.selectedGraphType.slice(1)
+      : "line"
+  );
   const [darkMode, setDarkMode] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -32,7 +42,7 @@ const Graphrender = () => {
   const [chartData, setChartData] = useState([]);
   const [historyFilter, setHistoryFilter] = useState("all");
   const [showCustomizePanel, setShowCustomizePanel] = useState(false);
-  const [loading, setloading] = useState({
+  const [loading, setLoading] = useState({
     chart: true,
     history: true
   });
@@ -51,31 +61,64 @@ const Graphrender = () => {
     }
   });
 
-  // Fetch chart data from backend
-  const fetchChartData = async () => {
+  // Fetch chart data from location state or session storage as fallback
+  const fetchChartData = () => {
     try {
-      setloading(prev => ({ ...prev, chart: true }));
+      setLoading(prev => ({ ...prev, chart: true }));
       setError(prev => ({ ...prev, chart: null }));
       
-      const response = await axios.get(`${API_BASE_URL}/chart-data`, {
-        params: {
-          DBid:DBid
-        }
-      });
+      let data = null;
       
-      setChartData(response.data);
+      // First check if location state has data
+      if (location.state && location.state.visualizationData) {
+        data = location.state.visualizationData;
+        console.log("Data loaded from location state:", data);
+      } 
+      // If not, try to get from session storage
+      else {
+        const storedData = sessionStorage.getItem('chartData');
+        if (storedData) {
+          data = JSON.parse(storedData);
+          console.log("Data loaded from session storage:", data);
+          
+          // Also get the graph type if available
+          const storedGraphType = sessionStorage.getItem('graphType');
+          if (storedGraphType) {
+            setGraphType(storedGraphType);
+          }
+        } else {
+          console.warn("No visualization data found in location state or session storage");
+          setError(prev => ({ ...prev, chart: "No data available for visualization" }));
+        }
+      }
+      
+      // Process and set the data if we have it
+      if (data) {
+        // Make sure data is in the right format before setting it
+        if (Array.isArray(data)) {
+          setChartData(data);
+          console.log("Chart data set:", data);
+        } else if (typeof data === 'object') {
+          // If data is an object but not an array, convert it to an array
+          setChartData([data]);
+          console.log("Chart data set from object:", [data]);
+        } else {
+          console.error("Visualization data is in an unexpected format:", data);
+          setError(prev => ({ ...prev, chart: "Invalid data format" }));
+        }
+      }
     } catch (err) {
-      console.error("Error fetching chart data:", err);
+      console.error("Error processing chart data:", err);
       setError(prev => ({ ...prev, chart: "Failed to load chart data" }));
     } finally {
-      setloading(prev => ({ ...prev, chart: false }));
+      setLoading(prev => ({ ...prev, chart: false }));
     }
   };
 
   // Fetch query history from backend
   const fetchQueryHistory = async () => {
     try {
-      setloading(prev => ({ ...prev, history: true }));
+      setLoading(prev => ({ ...prev, history: true }));
       setError(prev => ({ ...prev, history: null }));
       
       const response = await axios.get(`${API_BASE_URL}/query-history`, {
@@ -89,14 +132,39 @@ const Graphrender = () => {
       console.error("Error fetching query history:", err);
       setError(prev => ({ ...prev, history: "Failed to load query history" }));
     } finally {
-      setloading(prev => ({ ...prev, history: false }));
+      setLoading(prev => ({ ...prev, history: false }));
     }
   };
 
-  // Fetch data on component mount and when filters change
+  // Fetch data on component mount
   useEffect(() => {
+    console.log("Location state on mount:", location.state);
     fetchChartData();
-  }, [chartSettings.dateRange.start, chartSettings.dateRange.end]);
+    
+    // Optionally fetch history data if needed
+    // fetchQueryHistory();
+  }, []); // Only run once on mount
+
+  // Separate effect to update graph type when location state changes
+  useEffect(() => {
+    if (location.state?.selectedGraphType) {
+      // Convert the first letter to lowercase for proper graph type matching
+      const graphTypeValue = location.state.selectedGraphType;
+      console.log("Location Graph sent:", graphTypeValue);
+      
+      // Convert first letter to lowercase (e.g., "Bar" becomes "bar")
+      const formattedGraphType = graphTypeValue.charAt(0).toLowerCase() + graphTypeValue.slice(1);
+      setGraphType(formattedGraphType);
+    }
+  }, [location.state]);
+
+  // Separate effect for date range filters
+  useEffect(() => {
+    if (chartData.length > 0) {
+      // Apply date range filtering if needed
+      // This could be implemented here
+    }
+  }, [chartSettings.dateRange.start, chartSettings.dateRange.end, chartData]);
 
   useEffect(() => {
     fetchQueryHistory();
@@ -159,28 +227,11 @@ const Graphrender = () => {
   const userNames = [...new Set(historyData.map(item => item.userName))];
 
   return (
-    <div className={`App p-6 min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+    <div className={`App p-6 min-h-screen w-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
       <Navbar darkMode={darkMode} />
       {!isFullScreen && (
         <>
-          <div className="flex justify-between items-center mb-6">
-            {/* <h1 className="text-2xl font-bold">Advanced Data Visualization Dashboard</h1> */}
-            <div className="flex gap-2">
-              {/* <button 
-                onClick={() => setDarkMode(!darkMode)} 
-                className={`px-4 py-2 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-              >
-                Toggle {darkMode ? 'Light' : 'Dark'} Mode
-              </button> */}
     
-              {/* <button 
-                onClick={() => setShowCustomizePanel(!showCustomizePanel)} 
-                className={`px-4 py-2 rounded ${darkMode ? 'bg-violet-500 hover:bg-green-800' : 'bg-violet-500 hover:bg-green-800' } text-white`}
-              >
-                Customize
-              </button> */}
-             </div>
-           </div>
           
           {/* Tabs Navigation */}
           <div className="flex border-b mb-6">
@@ -536,68 +587,143 @@ const CustomTooltip = ({ active, payload, label, darkMode }) => {
 };
 
 const EnhancedGraphRender = ({ data, graphType, darkMode, isFullScreen, setIsFullScreen, chartSettings }) => {
-  // D3 rendering for graphs not available in Recharts
-  // useEffect(() => {
-  //   if (graphType === "custom") {
-  //     // Clear previous graph
-  //     d3.select("#d3-graph-container").select("svg").remove();
-  //     // Render custom D3 visualization here if needed
-  //   }
-  // }, [graphType, data, darkMode]);
+  // Check if data is valid and determine possible graph types
+  const [error, setError] = React.useState(null);
+  const [possibleGraphTypes, setPossibleGraphTypes] = React.useState([]);
+  
+  // Transform data to match expected format based on graphType
+  const transformedData = React.useMemo(() => {
+    if (!data || data.length === 0) {
+      setError("No data available");
+      return [];
+    }
+    
+    try {
+      // Determine structure of data
+      const firstItem = data[0];
+      const keys = Object.keys(firstItem);
+      
+      // Determine which fields can be used as categories and values
+      const categoryKeys = keys.filter(k => 
+        typeof firstItem[k] === 'string' || 
+        firstItem[k] instanceof Date
+      );
+      
+      const valueKeys = keys.filter(k => 
+        !isNaN(parseFloat(firstItem[k])) && 
+        isFinite(firstItem[k])
+      );
+      
+      // Determine possible graph types based on data structure
+      const possible = [];
+      if (categoryKeys.length >= 1 && valueKeys.length >= 1) {
+        possible.push("bar", "line", "area", "pie");
+      }
+      if (valueKeys.length >= 2) {
+        possible.push("scatter");
+      }
+      
+      setPossibleGraphTypes(possible);
+      
+      if (!possible.includes(graphType)) {
+        setError(`The selected graph type "${graphType}" is not compatible with this data structure`);
+      } else {
+        setError(null);
+      }
+      
+      // Get the first categorical and numerical keys for default mapping
+      const categoryKey = categoryKeys[0] || "name";
+      const valueKey = valueKeys[0] || "value";
+      
+      // Transform the data based on the structure
+      if (graphType === "scatter") {
+        // For scatter charts, we need at least two numerical values
+        const xKey = valueKeys[0] || "x";
+        const yKey = valueKeys[1] || valueKeys[0] || "y";
+        
+        return data.map((item, index) => ({
+          name: item[categoryKey] || `Point ${index + 1}`,
+          x: parseFloat(item[xKey] || 0),
+          y: parseFloat(item[yKey] || 0),
+          z: parseFloat(item[valueKeys[2] || valueKeys[0] || "z"] || 50),
+          series: item.series || "current"
+        }));
+      } else {
+        // For other chart types
+        return data.map((item) => ({
+          name: item[categoryKey] || "Unnamed",
+          value: parseFloat(item[valueKey] || 0),
+          // Include all numerical values for flexibility
+          ...valueKeys.reduce((acc, key) => {
+            acc[key] = parseFloat(item[key] || 0);
+            return acc;
+          }, {})
+        }));
+      }
+    } catch (err) {
+      console.error("Error transforming data:", err);
+      setError("Could not process data for visualization");
+      return [];
+    }
+  }, [data, graphType]);
 
   const gridColor = darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
   const textColor = darkMode ? "#fff" : "#333";
-  const currentPalette = COLOR_PALETTES[chartSettings.colorPalette].colors;
+  
+  // Handle undefined chartSettings gracefully
+  const colorPalette = chartSettings?.colorPalette || 'default';
+  const currentPalette = (COLOR_PALETTES[colorPalette]?.colors) || 
+    ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe'];
 
   const toggleFullScreen = () => {
     setIsFullScreen(!isFullScreen);
   };
 
-  // Render data labels for charts that support them
-  const renderDataLabels = () => {
-    if (!chartSettings.showDataLabels) return null;
+  // Determine which numerical fields to display based on the data
+  const getDataKeys = () => {
+    if (!data || data.length === 0) return [];
     
-    if (graphType === "line" || graphType === "area") {
-      return (
-        <>
-          <LabelList 
-            dataKey="value" 
-            position="top" 
-            fill={textColor} 
-            fontSize={12}
-            formatter={(value) => value.toFixed(0)}
-          />
-          <LabelList 
-            dataKey="comparison" 
-            position="top" 
-            fill={textColor} 
-            fontSize={12}
-            formatter={(value) => value.toFixed(0)}
-          />
-        </>
-      );
-    } else if (graphType === "bar") {
-      return (
-        <>
-          <LabelList 
-            dataKey="value" 
-            position="top" 
-            fill={textColor} 
-            fontSize={12}
-            formatter={(value) => value.toFixed(0)}
-          />
-          <LabelList 
-            dataKey="comparison" 
-            position="top" 
-            fill={textColor} 
-            fontSize={12}
-            formatter={(value) => value.toFixed(0)}
-          />
-        </>
-      );
-    }
-    return null;
+    const firstItem = data[0];
+    return Object.keys(firstItem).filter(key => 
+      !isNaN(parseFloat(firstItem[key])) && 
+      isFinite(firstItem[key])
+    );
   };
+  
+  const dataKeys = getDataKeys();
+  
+  // Render data labels for charts that support them
+  const renderDataLabels = (dataKey) => {
+    if (!chartSettings?.showDataLabels) return null;
+    
+    return (
+      <LabelList 
+        dataKey={dataKey} 
+        position="top" 
+        fill={textColor} 
+        fontSize={12}
+        formatter={(value) => value?.toFixed(0)}
+      />
+    );
+  };
+
+  if (error) {
+    return (
+      <div className="p-4 relative">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold">Data Visualization</h2>
+        </div>
+        <div className={`${isFullScreen ? 'h-[calc(100vh-8rem)]' : 'h-80'} w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg`}>
+          <div className="text-center p-4">
+            <p className="text-red-500 font-bold mb-2">{error}</p>
+            {possibleGraphTypes.length > 0 && (
+              <p>Try one of these compatible chart types: {possibleGraphTypes.join(', ')}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 relative">
@@ -621,179 +747,149 @@ const EnhancedGraphRender = ({ data, graphType, darkMode, isFullScreen, setIsFul
       </div>
       
       <div className={`${isFullScreen ? 'h-[calc(100vh-8rem)]' : 'h-80'} w-full transition-all duration-300`}>
-        {graphType !== "custom" ? (
+        {data && data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             {graphType === "line" && (
-              <LineChart data={data}>
-                {chartSettings.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
+              <LineChart data={transformedData}>
+                {chartSettings?.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
                 <XAxis dataKey="name" stroke={textColor} tick={{ fill: textColor }} />
                 <YAxis stroke={darkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"} tick={{ fill: textColor }} />
                 <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
-                {chartSettings.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  name="Current" 
-                  stroke={currentPalette[0]} 
-                  strokeWidth={3} 
-                  dot={{ r: 6, strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
-                  activeDot={{ r: 8, stroke: currentPalette[0], strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
-                >
-                  {renderDataLabels()}
-                </Line>
-                <Line 
-                  type="monotone" 
-                  dataKey="comparison" 
-                  name="Previous" 
-                  stroke={currentPalette[1]} 
-                  strokeWidth={3} 
-                  dot={{ r: 6, strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
-                  activeDot={{ r: 8, stroke: currentPalette[1], strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
-                >
-                  {renderDataLabels()}
-                </Line>
+                {chartSettings?.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
+                {dataKeys.slice(0, 3).map((key, index) => (
+                  <Line 
+                    key={key}
+                    type="monotone" 
+                    dataKey={key} 
+                    name={key} 
+                    stroke={currentPalette[index % currentPalette.length]} 
+                    strokeWidth={3} 
+                    dot={{ r: 6, strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
+                    activeDot={{ r: 8, stroke: currentPalette[index % currentPalette.length], strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
+                  >
+                    {renderDataLabels(key)}
+                  </Line>
+                ))}
               </LineChart>
             )}
             {graphType === "area" && (
-              <AreaChart data={data}>
-                {chartSettings.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
+              <AreaChart data={transformedData}>
+                {chartSettings?.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
                 <XAxis dataKey="name" stroke={textColor} tick={{ fill: textColor }} />
                 <YAxis stroke={darkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"} tick={{ fill: textColor }} />
                 <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
-                {chartSettings.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  name="Current" 
-                  stroke={currentPalette[0]} 
-                  fill={`${currentPalette[0]}80`}
-                  activeDot={{ r: 8, stroke: currentPalette[0], strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
-                >
-                  {renderDataLabels()}
-                </Area>
-                <Area 
-                  type="monotone" 
-                  dataKey="comparison" 
-                  name="Previous" 
-                  stroke={currentPalette[1]} 
-                  fill={`${currentPalette[1]}80`}
-                  activeDot={{ r: 8, stroke: currentPalette[1], strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
-                >
-                  {renderDataLabels()}
-                </Area>
+                {chartSettings?.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
+                {dataKeys.slice(0, 3).map((key, index) => (
+                  <Area 
+                    key={key}
+                    type="monotone" 
+                    dataKey={key} 
+                    name={key} 
+                    stroke={currentPalette[index % currentPalette.length]} 
+                    fill={`${currentPalette[index % currentPalette.length]}80`}
+                    activeDot={{ r: 8, stroke: currentPalette[index % currentPalette.length], strokeWidth: 2, fill: darkMode ? "#2d3748" : "#fff" }}
+                  >
+                    {renderDataLabels(key)}
+                  </Area>
+                ))}
               </AreaChart>
             )}
             {graphType === "bar" && (
-              <BarChart data={data}>
-                {chartSettings.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
+              <BarChart data={transformedData}>
+                {chartSettings?.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
                 <XAxis dataKey="name" stroke={textColor} tick={{ fill: textColor }} />
                 <YAxis stroke={darkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"} tick={{ fill: textColor }} />
                 <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
-                {chartSettings.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
-                <Bar 
-                  dataKey="value" 
-                  name="Current" 
-                  fill={currentPalette[0]} 
-                  radius={[4, 4, 0, 0]}
-                >
-                  {renderDataLabels()}
-                </Bar>
-                <Bar 
-                  dataKey="comparison" 
-                  name="Previous" 
-                  fill={currentPalette[1]} 
-                  radius={[4, 4, 0, 0]}
-                >
-                  {renderDataLabels()}
-                </Bar>
+                {chartSettings?.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
+                {dataKeys.slice(0, 3).map((key, index) => (
+                  <Bar 
+                    key={key}
+                    dataKey={key} 
+                    name={key} 
+                    fill={currentPalette[index % currentPalette.length]} 
+                    radius={[4, 4, 0, 0]}
+                  >
+                    {renderDataLabels(key)}
+                  </Bar>
+                ))}
               </BarChart>
             )}
-              {graphType === "scatter" && (
-  <ScatterChart>
-    {chartSettings.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
-    <XAxis 
-      dataKey="x" 
-      name="X" 
-      stroke={textColor} 
-      tick={{ fill: textColor }} 
-    />
-    <YAxis 
-      dataKey="y" 
-      name="Y" 
-      stroke={darkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"} 
-      tick={{ fill: textColor }} 
-    />
-    <ZAxis 
-      dataKey="z" 
-      range={[60, 300]} 
-      name="Size" 
-    />
-    <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
-    {chartSettings.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
-    <Scatter 
-      name="Current" 
-      data={data.filter(item => item.series === "current")} 
-      fill={currentPalette[0]} 
-      shape="circle"
-      stroke={currentPalette[0]}
-      strokeWidth={2}
-      fillOpacity={0.8}
-    >
-      {chartSettings.showDataLabels && data.filter(item => item.series === "current").map((entry, index) => (
-        <LabelList 
-          key={`label-${index}`} 
-          dataKey="name" 
-          position="top" 
-          style={{ fill: textColor }} 
-        />
-      ))}
-    </Scatter>
-    <Scatter 
-      name="Previous" 
-      data={data.filter(item => item.series === "comparison")} 
-      fill={currentPalette[1]} 
-      shape="circle"
-      stroke={currentPalette[1]}
-      strokeWidth={2}
-      fillOpacity={0.8}
-    >
-      {chartSettings.showDataLabels && data.filter(item => item.series === "comparison").map((entry, index) => (
-        <LabelList 
-          key={`label-${index}`} 
-          dataKey="name" 
-          position="top" 
-          style={{ fill: textColor }} 
-        />
-      ))}
-    </Scatter>
-  </ScatterChart>
-)}
+            {graphType === "scatter" && (
+              <ScatterChart>
+                {chartSettings?.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
+                <XAxis 
+                  dataKey="x" 
+                  name="X" 
+                  stroke={textColor} 
+                  tick={{ fill: textColor }} 
+                />
+                <YAxis 
+                  dataKey="y" 
+                  name="Y" 
+                  stroke={darkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"} 
+                  tick={{ fill: textColor }} 
+                />
+                <ZAxis 
+                  dataKey="z" 
+                  range={[60, 300]} 
+                  name="Size" 
+                />
+                <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
+                {chartSettings?.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
+                {["current", "comparison"].map((series, index) => {
+                  const seriesData = transformedData.filter(item => item.series === series);
+                  if (seriesData.length === 0) return null;
+                  
+                  return (
+                    <Scatter 
+                      key={series}
+                      name={series.charAt(0).toUpperCase() + series.slice(1)} 
+                      data={seriesData}
+                      fill={currentPalette[index % currentPalette.length]} 
+                      shape="circle"
+                      stroke={currentPalette[index % currentPalette.length]}
+                      strokeWidth={2}
+                      fillOpacity={0.8}
+                    >
+                      {chartSettings?.showDataLabels && seriesData.map((entry, idx) => (
+                        <LabelList 
+                          key={`label-${idx}`} 
+                          dataKey="name" 
+                          position="top" 
+                          style={{ fill: textColor }} 
+                        />
+                      ))}
+                    </Scatter>
+                  );
+                })}
+              </ScatterChart>
+            )}
             {graphType === "pie" && (
               <PieChart>
                 <Pie
-                  data={data}
+                  data={transformedData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
+                  labelLine={chartSettings?.showDataLabels}
                   outerRadius={isFullScreen ? 180 : 100}
                   innerRadius={isFullScreen ? 120 : 60}
                   paddingAngle={5}
-                  dataKey="value"
+                  dataKey={dataKeys[0] || "value"}
                   nameKey="name"
-                  label={({ name, percent }) => chartSettings.showDataLabels ? `${name}: ${(percent * 100).toFixed(0)}%` : null}
+                  label={({ name, percent }) => chartSettings?.showDataLabels ? `${name}: ${(percent * 100).toFixed(0)}%` : null}
                 >
-                  {data.map((entry, index) => (
+                  {transformedData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={currentPalette[index % currentPalette.length]} />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
-                {chartSettings.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
+                {chartSettings?.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
               </PieChart>
             )}
           </ResponsiveContainer>
         ) : (
-          <div id="d3-graph-container" className="h-full w-full flex items-center justify-center">
-            <p>Custom D3 Visualization would appear here</p>
+          <div className="h-full w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <p className="text-gray-500">No data available to display</p>
           </div>
         )}
       </div>
@@ -871,12 +967,10 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
   // Generate AI insights using Gemini API
   const generateInsights = async (data, chartType) => {
     try {
-      // Prepare data for the API
-      const dataContext = JSON.stringify(data.slice(0, 10)); // Send limited data to avoid payload size issues
-      
-      // Make request to Gemini API
+      const dataContext = JSON.stringify(data.slice(0, 10));
+  
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`,
         {
           contents: [
             {
@@ -898,22 +992,22 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
           ]
         }
       );
-
+  
       const generatedText = response?.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      
-      // Extract JSON from the response text
       const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
+  
       if (jsonMatch) {
         const parsedInsights = JSON.parse(jsonMatch[0]);
-        return parsedInsights.slice(0, 4); // Limit to max 4 insights
+        return parsedInsights.slice(0, 4);
       }
       
-      return []; // Return empty array if parsing fails
+      return [];
     } catch (error) {
       console.error("Error calling Gemini API:", error);
-      throw error; // Propagate error to be handled by the effect
+      throw error;
     }
   };
+  
 
   // Function to fetch insights - referenced in the UI but was missing
   const fetchAIInsights = () => {

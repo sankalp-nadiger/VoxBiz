@@ -40,17 +40,6 @@ class QueryResponse(BaseModel):
     success: bool
     error: Optional[str] = None
 
-# PostgreSQL schema retrieval endpoint (Node.js backend)
-NODE_BACKEND_URL = "http://localhost:3000"  # Change to your Node.js backend URL
-
-def fetch_database_schema():
-    try:
-        response = requests.get(f"{NODE_BACKEND_URL}/api/schema")
-        response.raise_for_status()
-        return response.json()  # Returns schema as a list of tables & columns
-    except requests.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching schema: {str(e)}")
-
 #Text processing
 class TextPreprocessor:
     def __init__(self):
@@ -960,7 +949,7 @@ async def process_query(request: QueryRequest):
         sql_generator = EnhancedSQLGenerator()
 
         # Process the input text
-        text = request.text
+        text = request.query
 
         # Detect language and translate if necessary
         detected_lang = language_processor.detect_language(text)
