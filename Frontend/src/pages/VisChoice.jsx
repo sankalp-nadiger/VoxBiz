@@ -131,7 +131,9 @@ function VisualizationChoicePage() {
         
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Table Visualization Card */}
+          {/* Table Visualization Card */}
           <div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg p-6 flex flex-col hover:shadow-xl transition-all">
+<<<<<<< HEAD
             <h2 className="text-2xl font-bold mb-3">{translations.tableCard}</h2>
             <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.tableDescription}</p>
             
@@ -185,6 +187,45 @@ function VisualizationChoicePage() {
               {translations.chooseButton}
             </button>
           </div>
+=======
+  <h2 className="text-2xl font-bold mb-3">{translations.tableCard}</h2>
+  <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.tableDescription}</p>
+  
+  <div className="flex-grow flex items-center justify-center mb-6">
+    <PreviewOption title={translations.tablePreview} imageSrc="/table-preview.png" />
+  </div>
+  
+  <button 
+    className={`w-full py-2 px-4 rounded-lg transition-colors ${
+      loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
+    }`}
+    onClick={navigateToTableView}
+    disabled={loading}
+  >
+    {loading ? 'Loading...' : translations.chooseButton}
+  </button>
+</div>
+
+{/* Graph Visualization Card */}
+<div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg p-6 flex flex-col hover:shadow-xl transition-all">
+  <h2 className="text-2xl font-bold mb-3">{translations.graphCard}</h2>
+  <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.graphDescription}</p>
+  
+  <div className="flex-grow flex items-center justify-center mb-6">
+    <PreviewOption title={translations.graphPreview} imageSrc="/graph-preview.png" />
+  </div>
+  
+  <button 
+    className={`w-full py-2 px-4 rounded-lg transition-colors ${
+      loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
+    }`}
+    onClick={navigateToGraphView}
+    disabled={loading}
+  >
+    {loading ? 'Loading...' : translations.chooseButton}
+  </button>
+</div>
+>>>>>>> 6eda6e3ae9aa071986df57b8ac7ee593ed42a2df
         </div>
       </main>
       
