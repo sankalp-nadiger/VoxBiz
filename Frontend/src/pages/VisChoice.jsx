@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import { PreviewOption } from '../components/ui/link-preview';
-import { useNavigate } from "react-router-dom";
+import { useLocation , useNavigate } from 'react-router-dom';
 
-const VisualizationChoicePage = () => {
+function VisualizationChoicePage() {
+  const location = useLocation();
   const [darkMode, setDarkMode] = useState(true);
   const navigate = useNavigate();
   const [translations, setTranslations] = useState({
@@ -19,34 +20,16 @@ const VisualizationChoicePage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Fetch data from backend
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const dbId = localStorage.getItem('dbId');
-if (!dbId) {
-  console.error('No database selected');
-  return;
-}
-        const response = await fetch(`http://localhost:8000/api/query/data/${dbId}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const result = await response.json();
-        setData(result);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load data. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    const { queryResponse } = location.state || {};
+    console.log("Query Response:", queryResponse);
+    if (queryResponse) {
+      setData(queryResponse);
+    }
+  }, [location.state]);
+  
 
-    fetchData();
-  }, []);
+
 
   // Listen for theme changes
   useEffect(() => {

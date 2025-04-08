@@ -42,6 +42,7 @@ export const processQuery = async (req, res) => {
 
     // Step 3: Execute the SQL query
     const result = await executeQuery(dbEntry, sqlQuery);
+    console.log("🔹 SQL query result:", result);
 
     // Step 4: Send response to frontend
     return res.status(200).json({ success: true, data: result });

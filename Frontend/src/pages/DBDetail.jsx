@@ -5,9 +5,10 @@ import { Mic, Edit, Save, Database, Key, Lock, Cog } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import VoiceSearchModal from '../components/VoiceSearchModal';
 import { useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const DatabaseDetailsPage = ( )=> {
-
+  const navigate = useNavigate();
   const location = useLocation();
   const dbInfo = location.state?.dbInfo;
   // Static database data for testing
@@ -199,11 +200,11 @@ const DatabaseDetailsPage = ( )=> {
         }
         return response.json();
       })
-      .then(data => {
-        console.log("Database query successful:", data);
+      .then(response => {
+        console.log("Database query successful:", response.data);
         setProcessingVoice(false);
         // On success, navigate to the choice page
-        window.location.href = '/visChoice';
+        navigate('/visChoice', { state: { queryResponse: response.data } });
       })
       .catch(error => {
         console.error("Error processing database query:", error);
