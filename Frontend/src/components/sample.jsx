@@ -1,14 +1,65 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";  
-import Navbar from './Navbar';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LabelList, ScatterChart,
-  Scatter } from "recharts";
+import axios from "axios";
+import * as d3 from "d3";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LabelList } from "recharts";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
-// Sample data for query history (will be replaced with actual data from backend)
-const initialHistoryData = [];
+// Enhanced sample data with comparison values
+const sampleData = [
+  { name: "Jan", value: 120, comparison: 100 },
+  { name: "Feb", value: 150, comparison: 130 },
+  { name: "Mar", value: 90, comparison: 120 },
+  { name: "Apr", value: 180, comparison: 150 },
+  { name: "May", value: 220, comparison: 180 },
+  { name: "Jun", value: 170, comparison: 190 }
+];
+
+// Sample data for query history
+const initialHistoryData = [
+  { 
+    id: 1, 
+    query: "SELECT * FROM users WHERE age > 25", 
+    executionTime: 230, 
+    timestamp: "2025-04-01T09:30:00", 
+    userName: "Sarah Chen" 
+  },
+  { 
+    id: 2, 
+    query: "UPDATE products SET price = price * 1.05 WHERE category = 'electronics'", 
+    executionTime: 150, 
+    timestamp: "2025-04-01T11:45:00", 
+    userName: "James Wilson" 
+  },
+  { 
+    id: 3, 
+    query: "SELECT COUNT(*) FROM orders GROUP BY status", 
+    executionTime: 320, 
+    timestamp: "2025-04-01T14:20:00", 
+    userName: "Sarah Chen" 
+  },
+  { 
+    id: 4, 
+    query: "SELECT customer_id, SUM(total) FROM invoices GROUP BY customer_id", 
+    executionTime: 450, 
+    timestamp: "2025-04-02T10:15:00", 
+    userName: "Maria Rodriguez" 
+  },
+  { 
+    id: 5, 
+    query: "DELETE FROM temp_logs WHERE created_at < '2025-03-15'", 
+    executionTime: 180, 
+    timestamp: "2025-04-02T13:30:00", 
+    userName: "James Wilson" 
+  },
+  { 
+    id: 6, 
+    query: "SELECT AVG(salary) FROM employees GROUP BY department", 
+    executionTime: 275, 
+    timestamp: "2025-04-03T09:10:00", 
+    userName: "Sarah Chen" 
+  },
+];
 
 // Material-inspired theme colors
 const primaryColor = "#3f51b5";
@@ -24,23 +75,14 @@ const COLOR_PALETTES = [
   { name: "Dark", colors: ['#424242', '#616161', '#757575', '#9e9e9e', '#bdbdbd'] }
 ];
 
-const Graphrender = () => {
+const render = () => {
   const [graphType, setGraphType] = useState("line");
   const [darkMode, setDarkMode] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [historyData, setHistoryData] = useState(initialHistoryData);
-  const [chartData, setChartData] = useState([]);
   const [historyFilter, setHistoryFilter] = useState("all");
   const [showCustomizePanel, setShowCustomizePanel] = useState(false);
-  const [loading, setloading] = useState({
-    chart: true,
-    history: true
-  });
-  const [error, setError] = useState({
-    chart: null,
-    history: null
-  });
   const [chartSettings, setChartSettings] = useState({
     showLegend: true,
     showGrid: true,
@@ -51,57 +93,6 @@ const Graphrender = () => {
       end: null
     }
   });
-
-  // Fetch chart data from backend
-  const fetchChartData = async () => {
-    try {
-      setloading(prev => ({ ...prev, chart: true }));
-      setError(prev => ({ ...prev, chart: null }));
-      
-      const response = await axios.get(`${API_BASE_URL}/chart-data`, {
-        params: {
-          DBid:DBid
-        }
-      });
-      
-      setChartData(response.data);
-    } catch (err) {
-      console.error("Error fetching chart data:", err);
-      setError(prev => ({ ...prev, chart: "Failed to load chart data" }));
-    } finally {
-      setloading(prev => ({ ...prev, chart: false }));
-    }
-  };
-
-  // Fetch query history from backend
-  const fetchQueryHistory = async () => {
-    try {
-      setloading(prev => ({ ...prev, history: true }));
-      setError(prev => ({ ...prev, history: null }));
-      
-      const response = await axios.get(`${API_BASE_URL}/query-history`, {
-        params: {
-          user: historyFilter === "all" ? null : historyFilter
-        }
-      });
-      
-      setHistoryData(response.data);
-    } catch (err) {
-      console.error("Error fetching query history:", err);
-      setError(prev => ({ ...prev, history: "Failed to load query history" }));
-    } finally {
-      setloading(prev => ({ ...prev, history: false }));
-    }
-  };
-
-  // Fetch data on component mount and when filters change
-  useEffect(() => {
-    fetchChartData();
-  }, [chartSettings.dateRange.start, chartSettings.dateRange.end]);
-
-  useEffect(() => {
-    fetchQueryHistory();
-  }, [historyFilter]);
 
   // Update chart settings
   const handleSettingChange = (setting, value) => {
@@ -119,22 +110,17 @@ const Graphrender = () => {
     }));
   };
 
-  useEffect(() => {
-      // Theme from localStorage
-      const storedMode = localStorage.getItem('mode');
-      if (storedMode) {
-        setDarkMode(storedMode === 'dark');
-      }
-      const handleThemeChange = (event) => {
-        const newTheme = event.detail.theme;
-        setDarkMode(newTheme === 'dark');
-      };
-      window.addEventListener('themeChange', handleThemeChange);
-      
-      return () => {
-        window.removeEventListener('themeChange', handleThemeChange);
-      };
-    }, []);
+  // Filter data based on date range if applicable
+  const filteredData = () => {
+    if (!chartSettings.dateRange.start || !chartSettings.dateRange.end) {
+      return sampleData;
+    }
+    
+    // This is just a placeholder - you would need to implement actual date filtering
+    // based on your data structure if your data has date fields
+    return sampleData;
+  };
+
   // Group queries by day for history view
   const groupedByDay = historyData.reduce((acc, item) => {
     const date = new Date(item.timestamp).toLocaleDateString();
@@ -159,29 +145,32 @@ const Graphrender = () => {
   // Get unique user names for filter
   const userNames = [...new Set(historyData.map(item => item.userName))];
 
+  // Filter history data based on selected user
+  const filteredHistoryData = historyFilter === "all" 
+    ? historyData 
+    : historyData.filter(item => item.userName === historyFilter);
+  
   return (
-    <div className={`App p-6 min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
-      <Navbar darkMode={darkMode} />
+    <div className={`p-6 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-800'} transition-all duration-300 min-h-screen`}>
       {!isFullScreen && (
         <>
           <div className="flex justify-between items-center mb-6">
-            {/* <h1 className="text-2xl font-bold">Advanced Data Visualization Dashboard</h1> */}
+            <h1 className="text-2xl font-bold">Advanced Data Visualization Dashboard</h1>
             <div className="flex gap-2">
-              {/* <button 
+              <button 
                 onClick={() => setDarkMode(!darkMode)} 
                 className={`px-4 py-2 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
               >
                 Toggle {darkMode ? 'Light' : 'Dark'} Mode
-              </button> */}
-    
-              {/* <button 
+              </button>
+              <button 
                 onClick={() => setShowCustomizePanel(!showCustomizePanel)} 
-                className={`px-4 py-2 rounded ${darkMode ? 'bg-violet-500 hover:bg-green-800' : 'bg-violet-500 hover:bg-green-800' } text-white`}
+                className={`px-4 py-2 rounded ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
               >
                 Customize
-              </button> */}
-             </div>
-           </div>
+              </button>
+            </div>
+          </div>
           
           {/* Tabs Navigation */}
           <div className="flex border-b mb-6">
@@ -204,16 +193,6 @@ const Graphrender = () => {
               onClick={() => setActiveTab("history")}
             >
               Query History
-            </button>
-            <button 
-              className={`ml-282 py-2 px-4 font-medium transition-colors ${
-                activeTab === "" 
-                  ? `border-b-2 border-${darkMode ? 'blue-400' : 'blue-600'} text-${darkMode ? 'blue-400' : 'blue-600'}`
-                  : `text-${darkMode ? 'gray-400' : 'gray-500'} hover:text-${darkMode ? 'gray-200' : 'gray-700'}`
-              }`}
-              onClick={() => setShowCustomizePanel(!showCustomizePanel)} 
-            >
-              Customize
             </button>
           </div>
         </>
@@ -355,52 +334,19 @@ const Graphrender = () => {
 
           <div className={`grid ${isFullScreen ? '' : 'grid-cols-1 lg:grid-cols-3'} gap-6`}>
             <div className={`${isFullScreen ? 'w-full h-screen' : 'lg:col-span-2'} rounded-lg shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} transition-all duration-300`}>
-              {loading.chart ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <svg className="animate-spin h-12 w-12 mx-auto text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p className="mt-4">loading chart data...</p>
-                  </div>
-                </div>
-              ) : error.chart ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center p-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <p className="mt-2">{error.chart}</p>
-                    <button 
-                      onClick={fetchChartData}
-                      className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <EnhancedGraphRender 
-                  data={chartData} 
-                  graphType={graphType} 
-                  darkMode={darkMode} 
-                  isFullScreen={isFullScreen}
-                  setIsFullScreen={setIsFullScreen}
-                  chartSettings={chartSettings}
-                />
-              )}
+              <EnhancedGraphRender 
+                data={filteredData()} 
+                graphType={graphType} 
+                darkMode={darkMode} 
+                isFullScreen={isFullScreen}
+                setIsFullScreen={setIsFullScreen}
+                chartSettings={chartSettings}
+              />
             </div>
             
             {!isFullScreen && (
               <div className="lg:col-span-1">
-                <AIInsightsPanel 
-                  data={chartData} 
-                  graphType={graphType} 
-                  darkMode={darkMode} 
-                  loading={loading.chart}
-                  error={error.chart}
-                />
+                <AIInsightsPanel data={filteredData()} graphType={graphType} darkMode={darkMode} />
               </div>
             )}
           </div>
@@ -429,95 +375,67 @@ const Graphrender = () => {
             </div>
           </div>
 
-          {loading.history ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <svg className="animate-spin h-12 w-12 mx-auto text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="mt-4">loading query history...</p>
-              </div>
+          {/* Performance Chart */}
+          <div className={`mb-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+            <h3 className={`text-lg font-semibold mb-3 text-${darkMode ? 'gray-200' : 'gray-700'}`}>Query Performance</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={historyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"} />
+                  <XAxis dataKey="date" stroke={darkMode ? "#fff" : "#333"} tick={{ fill: darkMode ? "#fff" : "#333" }} />
+                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" tick={{ fill: darkMode ? "#fff" : "#333" }} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" tick={{ fill: darkMode ? "#fff" : "#333" }} />
+                  <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
+                  <Legend wrapperStyle={{ color: darkMode ? "#fff" : "#333" }} />
+                  <Line yAxisId="left" type="monotone" dataKey="avgExecutionTime" name="Avg. Execution Time (ms)" stroke="#8884d8" activeDot={{ r: 8 }} />
+                  <Line yAxisId="right" type="monotone" dataKey="queryCount" name="Query Count" stroke="#82ca9d" />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-          ) : error.history ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center p-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <p className="mt-2">{error.history}</p>
-                <button 
-                  onClick={fetchQueryHistory}
-                  className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Performance Chart */}
-              <div className={`mb-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                <h3 className={`text-lg font-semibold mb-3 text-${darkMode ? 'gray-200' : 'gray-700'}`}>Query Performance</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={historyChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"} />
-                      <XAxis dataKey="date" stroke={darkMode ? "#fff" : "#333"} tick={{ fill: darkMode ? "#fff" : "#333" }} />
-                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" tick={{ fill: darkMode ? "#fff" : "#333" }} />
-                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" tick={{ fill: darkMode ? "#fff" : "#333" }} />
-                      <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
-                      <Legend wrapperStyle={{ color: darkMode ? "#fff" : "#333" }} />
-                      <Line yAxisId="left" type="monotone" dataKey="avgExecutionTime" name="Avg. Execution Time (ms)" stroke="#8884d8" activeDot={{ r: 8 }} />
-                      <Line yAxisId="right" type="monotone" dataKey="queryCount" name="Query Count" stroke="#82ca9d" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+          </div>
 
-              {/* History List */}
-              <div>
-                {Object.entries(groupedByDay).map(([date, queries]) => {
-                  const dayQueries = historyFilter === "all" ? queries : queries.filter(q => q.userName === historyFilter);
-                  if (dayQueries.length === 0) return null;
-                  
-                  return (
-                    <div key={date} className="mb-6">
-                      <h3 className={`text-lg font-semibold mb-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded`}>{date}</h3>
-                      <div className="space-y-4">
-                        {dayQueries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map(query => (
-                          <div key={query.id} className={`border-l-4 border-blue-500 pl-4 py-2 ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
-                            <div className="flex justify-between items-center mb-1">
-                              <div className="flex items-center">
-                                <span className={`font-semibold text-${darkMode ? 'gray-200' : 'gray-800'}`}>
-                                  {new Date(query.timestamp).toLocaleTimeString()}
-                                </span>
-                                <span className={`ml-4 ${darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'} py-1 px-2 rounded text-sm`}>
-                                  {query.userName}
-                                </span>
-                              </div>
-                              <span className={`text-${darkMode ? 'gray-300' : 'gray-600'}`}>
-                                Execution Time: <span className="font-medium">{query.executionTime} ms</span>
-                              </span>
-                            </div>
-                            <pre className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} p-3 rounded text-sm overflow-x-auto`}>
-                              {query.query}
-                            </pre>
+          {/* History List */}
+          <div>
+            {Object.entries(groupedByDay).map(([date, queries]) => {
+              const dayQueries = historyFilter === "all" ? queries : queries.filter(q => q.userName === historyFilter);
+              if (dayQueries.length === 0) return null;
+              
+              return (
+                <div key={date} className="mb-6">
+                  <h3 className={`text-lg font-semibold mb-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded`}>{date}</h3>
+                  <div className="space-y-4">
+                    {dayQueries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map(query => (
+                      <div key={query.id} className={`border-l-4 border-blue-500 pl-4 py-2 ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="flex items-center">
+                            <span className={`font-semibold text-${darkMode ? 'gray-200' : 'gray-800'}`}>
+                              {new Date(query.timestamp).toLocaleTimeString()}
+                            </span>
+                            <span className={`ml-4 ${darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'} py-1 px-2 rounded text-sm`}>
+                              {query.userName}
+                            </span>
                           </div>
-                        ))}
+                          <span className={`text-${darkMode ? 'gray-300' : 'gray-600'}`}>
+                            Execution Time: <span className="font-medium">{query.executionTime} ms</span>
+                          </span>
+                        </div>
+                        <pre className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} p-3 rounded text-sm overflow-x-auto`}>
+                          {query.query}
+                        </pre>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
 };
 
+// Custom tooltip component for Recharts
 const CustomTooltip = ({ active, payload, label, darkMode }) => {
   if (active && payload && payload.length) {
     return (
@@ -538,13 +456,13 @@ const CustomTooltip = ({ active, payload, label, darkMode }) => {
 
 const EnhancedGraphRender = ({ data, graphType, darkMode, isFullScreen, setIsFullScreen, chartSettings }) => {
   // D3 rendering for graphs not available in Recharts
-  // useEffect(() => {
-  //   if (graphType === "custom") {
-  //     // Clear previous graph
-  //     d3.select("#d3-graph-container").select("svg").remove();
-  //     // Render custom D3 visualization here if needed
-  //   }
-  // }, [graphType, data, darkMode]);
+  useEffect(() => {
+    if (graphType === "custom") {
+      // Clear previous graph
+      d3.select("#d3-graph-container").select("svg").remove();
+      // Render custom D3 visualization here if needed
+    }
+  }, [graphType, data, darkMode]);
 
   const gridColor = darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
   const textColor = darkMode ? "#fff" : "#333";
@@ -709,66 +627,6 @@ const EnhancedGraphRender = ({ data, graphType, darkMode, isFullScreen, setIsFul
                 </Bar>
               </BarChart>
             )}
-              {graphType === "scatter" && (
-  <ScatterChart>
-    {chartSettings.showGrid && <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />}
-    <XAxis 
-      dataKey="x" 
-      name="X" 
-      stroke={textColor} 
-      tick={{ fill: textColor }} 
-    />
-    <YAxis 
-      dataKey="y" 
-      name="Y" 
-      stroke={darkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"} 
-      tick={{ fill: textColor }} 
-    />
-    <ZAxis 
-      dataKey="z" 
-      range={[60, 300]} 
-      name="Size" 
-    />
-    <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
-    {chartSettings.showLegend && <Legend wrapperStyle={{ color: textColor }} />}
-    <Scatter 
-      name="Current" 
-      data={data.filter(item => item.series === "current")} 
-      fill={currentPalette[0]} 
-      shape="circle"
-      stroke={currentPalette[0]}
-      strokeWidth={2}
-      fillOpacity={0.8}
-    >
-      {chartSettings.showDataLabels && data.filter(item => item.series === "current").map((entry, index) => (
-        <LabelList 
-          key={`label-${index}`} 
-          dataKey="name" 
-          position="top" 
-          style={{ fill: textColor }} 
-        />
-      ))}
-    </Scatter>
-    <Scatter 
-      name="Previous" 
-      data={data.filter(item => item.series === "comparison")} 
-      fill={currentPalette[1]} 
-      shape="circle"
-      stroke={currentPalette[1]}
-      strokeWidth={2}
-      fillOpacity={0.8}
-    >
-      {chartSettings.showDataLabels && data.filter(item => item.series === "comparison").map((entry, index) => (
-        <LabelList 
-          key={`label-${index}`} 
-          dataKey="name" 
-          position="top" 
-          style={{ fill: textColor }} 
-        />
-      ))}
-    </Scatter>
-  </ScatterChart>
-)}
             {graphType === "pie" && (
               <PieChart>
                 <Pie
@@ -816,253 +674,119 @@ const EnhancedGraphRender = ({ data, graphType, darkMode, isFullScreen, setIsFul
   );
 };
 
-// ... (rest of the components remain the same, but update AIInsightsPanel to handle loading and error states) ...
 const AIInsightsPanel = ({ data, graphType, darkMode }) => {
-  const [insights, setInsights] = useState([]);
-  const [loading, setloading] = useState(true); // Fixed variable name from setIsloading
-  const [error, setError] = useState(null); // Added error state
+  const [explanation, setExplanation] = useState("");
+  const [suggestions, setSuggestions] = useState("");
+  const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [currentInsightIndex, setCurrentInsightIndex] = useState(null);
-  const [explanation, setExplanation] = useState(''); // Added explanation state
-  const [suggestions, setSuggestions] = useState(''); // Added suggestions state
+  const speechSynthesisRef = useRef(null);
   
-  // Process data for insights
   useEffect(() => {
-    if (!data || data.length === 0) {
-      setInsights([]);
-      setloading(false);
-      return;
-    }
+    // Clear previous insights when graph type changes
+    setExplanation("");
+    setSuggestions("");
     
-    setloading(true);
-    setError(null); // Reset error state when fetching new data
-    generateInsights(data, graphType)
-      .then(generatedInsights => {
-        setInsights(generatedInsights);
-        
-        // Generate explanation and suggestions from insights
-        if (generatedInsights && generatedInsights.length > 0) {
-          const explanationText = "Based on the analysis of your data, here are the key insights we've identified.";
-          setExplanation(explanationText);
-          
-          // Convert insights to bullet-point suggestions
-          const suggestionsText = generatedInsights.map(insight => 
-            `• ${insight.title}: ${insight.description}`
-          ).join('\n\n');
-          
-          setSuggestions(suggestionsText);
-        }
-        
-        setloading(false);
-      })
-      .catch(err => {
-        console.error("Error generating insights:", err);
-        setError("Failed to generate AI insights. Please try again later.");
-        setInsights([
-          {
-            title: "Error Generating Insights",
-            description: "Failed to generate AI insights. Please try again later.",
-            type: "error"
-          }
-        ]);
-        setloading(false);
-      });
-  }, [data, graphType]);
+    // Clean up speech synthesis when component unmounts
+    return () => {
+      if (speechSynthesisRef.current && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };  
+  }, [graphType, data]);
 
-  // Generate AI insights using Gemini API
-  const generateInsights = async (data, chartType) => {
+  const fetchAIInsights = async () => {
+    setLoading(true);
     try {
-      // Prepare data for the API
-      const dataContext = JSON.stringify(data.slice(0, 10)); // Send limited data to avoid payload size issues
+      // Create a more detailed prompt with specific expectations
+      const prompt = `
+        Analyze this dataset: ${JSON.stringify(data)} for the ${graphType} visualization.
+        
+        Please provide:
+        1. EXPLANATION: Give me a short 5-6 lines explanation of the graph
+        2. INSIGHTS: 3-5 specific business insights derived from this data
+        
+        Format your response with clear section headers: "EXPLANATION", "INSIGHTS", and Give the user a road map to improve his performance in the next year.
+        Provide a line gap after each section.
+      `;
       
-      // Make request to Gemini API
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
-          contents: [
-            {
-              parts: [
-                {
-                  text: `Based on this chart data: ${dataContext} 
-                  Generate 3-4 business insights and recommendations. The chart type is ${chartType}.
-                  Format the response as JSON with this structure:
-                  [
-                    {
-                      "title": "Insight title",
-                      "description": "Detailed insight and recommendation",
-                      "type": "trend|anomaly|opportunity|risk"
-                    }
-                  ]`
-                }
-              ]
-            }
-          ]
+          contents: [{
+            parts: [{ text: prompt }]
+          }]
         }
       );
-
-      const generatedText = response?.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      
-      // Extract JSON from the response text
-      const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        const parsedInsights = JSON.parse(jsonMatch[0]);
-        return parsedInsights.slice(0, 4); // Limit to max 4 insights
+  
+      // More robust response parsing
+      if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const aiResponseText = response.data.candidates[0].content.parts[0].text;
+        
+        // Parse sections more reliably using regex
+        const explanationMatch = aiResponseText.match(/EXPLANATION:?([\s\S]*?)(?=INSIGHTS:|RECOMMENDATIONS:|$)/i);
+        const insightsMatch = aiResponseText.match(/INSIGHTS:?([\s\S]*?)(?=RECOMMENDATIONS:|$)/i);
+        const recommendationsMatch = aiResponseText.match(/RECOMMENDATIONS:?([\s\S]*?)$/i);
+        
+        setExplanation(explanationMatch ? explanationMatch[1].trim() : "No explanation provided");
+        
+        // Combine insights and recommendations for the suggestions section
+        const insightsText = insightsMatch ? insightsMatch[1].trim() : "";
+        const recommendationsText = recommendationsMatch ? recommendationsMatch[1].trim() : "";
+        setSuggestions(`${insightsText}\n\n${recommendationsText}`.trim() || "No insights provided");
+      } else {
+        throw new Error("Unable to extract content from API response");
       }
-      
-      return []; // Return empty array if parsing fails
     } catch (error) {
-      console.error("Error calling Gemini API:", error);
-      throw error; // Propagate error to be handled by the effect
+      console.error("Error fetching AI insights:", error);
+      setExplanation("Error generating insights. Please try again.");
+      setSuggestions("Check your API key and network connection.");
     }
+    setLoading(false);
   };
 
-  // Function to fetch insights - referenced in the UI but was missing
-  const fetchAIInsights = () => {
-    setloading(true);
-    setError(null);
-    
-    // Re-run the insights generation
-    generateInsights(data, graphType)
-      .then(generatedInsights => {
-        setInsights(generatedInsights);
-        
-        // Generate explanation and suggestions from insights
-        if (generatedInsights && generatedInsights.length > 0) {
-          const explanationText = "Based on the analysis of your data, here are the key insights we've identified.";
-          setExplanation(explanationText);
-          
-          // Convert insights to bullet-point suggestions
-          const suggestionsText = generatedInsights.map(insight => 
-            `• ${insight.title}: ${insight.description}`
-          ).join('\n\n');
-          
-          setSuggestions(suggestionsText);
-        }
-        
-        setloading(false);
-      })
-      .catch(err => {
-        console.error("Error generating insights:", err);
-        setError("Failed to generate AI insights. Please try again later.");
-        setloading(false);
-      });
-  };
-
-  // Handle text-to-speech for insights
-  const speakInsight = (insight, index) => {
-    // Stop any current speech
+  const handleVerbalResponse = () => {
+    // Stop any existing speech
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     
-    if (isSpeaking && currentInsightIndex === index) {
-      // Toggle off if already speaking this insight
+    if (isSpeaking) {
       setIsSpeaking(false);
-      setCurrentInsightIndex(null);
-      window.speechSynthesis.cancel();
-    } else {
-      // Speak the new insight
-      const textToSpeak = `${insight.title}. ${insight.description}`;
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      
-      // Configure speech settings
-      utterance.rate = 1.0;
+      return;
+    }
+
+    const textToRead = `Data Analysis: ${explanation} Insights and Recommendations: ${suggestions}`;
+    
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.rate = 1.5;
       utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+      utterance.lang = 'en-US';
       
-      // Get available voices and try to select a good one
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(voice => 
-        voice.name.includes('Google') || 
-        voice.name.includes('Female') || 
-        voice.name.includes('US English')
-      );
+      // Store reference to cancel if needed
+      speechSynthesisRef.current = utterance;
       
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
-      
-      // Set speaking state
-      setIsSpeaking(true);
-      setCurrentInsightIndex(index);
-      
-      // Handle speech end
-      utterance.onend = () => {
+      // Handle speech events
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => {
         setIsSpeaking(false);
-        setCurrentInsightIndex(null);
+        console.error('Speech synthesis error');
       };
       
-      // Start speaking
       window.speechSynthesis.speak(utterance);
+    } else {
+      alert('Text-to-speech not supported in your browser');
     }
   };
-
-  // Get icon for insight type
-  const getInsightIcon = (type) => {
-    switch (type) {
-      case 'trend':
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-        );
-      case 'anomaly':
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        );
-      case 'opportunity':
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        );
-      case 'risk':
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        );
-      default:
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        );
-    }
-  };
-
-  // Get color for insight type
-  const getInsightColor = (type) => {
-    switch (type) {
-      case 'trend':
-        return darkMode ? 'blue-500' : 'blue-600';
-      case 'anomaly':
-        return darkMode ? 'yellow-400' : 'yellow-500';
-      case 'opportunity':
-        return darkMode ? 'green-400' : 'green-500';
-      case 'risk':
-        return darkMode ? 'red-400' : 'red-500';
-      case 'error':
-        return darkMode ? 'red-400' : 'red-500';
-      default:
-        return darkMode ? 'purple-400' : 'purple-500';
-    }
-  };
-
+  
   return (
     <div className={`rounded-lg shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'} transition-all duration-300 h-full flex flex-col`}>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
         <h2 className="text-lg font-bold">AI Data Insights</h2>
         <div className="flex items-center">
           <button 
-            onClick={() => {
-              // Only if there are insights to speak
-              if (insights.length > 0) {
-                speakInsight(insights[0], 0);
-              }
-            }}
+            onClick={handleVerbalResponse}
             className={`p-2 rounded-full mr-2 ${
               isSpeaking 
                 ? `bg-red-500 hover:bg-red-600 text-white` 
@@ -1070,22 +794,22 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
             }`}
             aria-label={isSpeaking ? "Stop speaking" : "Read insights aloud"}
             title={isSpeaking ? "Stop speaking" : "Read insights aloud"}
-            disabled={loading || error || !explanation}
           >
             {isSpeaking ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5h14M5 19h14" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
               </svg>
             ) : (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.465a5 5 0 001.06-7.069m-1.06 7.07l14.849-14.85" />
               </svg>
             )}
           </button>
           <button 
             onClick={fetchAIInsights}
             className={`p-2 rounded-full ${
-              loading
+              loading 
                 ? `bg-gray-500 cursor-not-allowed` 
                 : `bg-${darkMode ? 'blue-600' : 'blue-500'} hover:bg-${darkMode ? 'blue-700' : 'blue-600'}`
             } text-white`}
@@ -1093,34 +817,22 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
             aria-label="Generate insights"
             title="Generate insights"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
+            {loading ? (
+              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
       
       <div className="p-4 flex-grow overflow-y-auto">
-        {error ? (
-          <div className={`flex flex-col items-center justify-center h-full text-${darkMode ? 'red-400' : 'red-600'}`}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <p className="text-center">{error}</p>
-          </div>
-        ) : loading ? (
-          <div className="flex flex-col items-center justify-center h-full py-8">
-            <div className="animate-pulse flex flex-col items-center">
-              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-3/4 mb-4`}></div>
-              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-2/3 mb-4`}></div>
-              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-1/2 mb-8`}></div>
-              
-              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-full mb-2`}></div>
-              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-full mb-2`}></div>
-              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-3/4`}></div>
-            </div>
-          </div>
-        ) : (!explanation && !suggestions) ? (
+        {(!explanation && !suggestions && !loading) && (
           <div className={`flex flex-col items-center justify-center h-full text-${darkMode ? 'gray-400' : 'gray-500'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -1133,7 +845,23 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
               Generate Insights
             </button>
           </div>
-        ) : (
+        )}
+        
+        {loading && (
+          <div className="flex flex-col items-center justify-center h-full py-8">
+            <div className="animate-pulse flex flex-col items-center">
+              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-3/4 mb-4`}></div>
+              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-2/3 mb-4`}></div>
+              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-1/2 mb-8`}></div>
+              
+              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-full mb-2`}></div>
+              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-full mb-2`}></div>
+              <div className={`h-4 bg-${darkMode ? 'gray-700' : 'gray-300'} rounded w-3/4`}></div>
+            </div>
+          </div>
+        )}
+        
+        {(explanation || suggestions) && !loading && (
           <>
             <div className="mb-6">
               <h3 className="text-md font-semibold mb-2">Explanation</h3>
@@ -1155,4 +883,4 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
   );
 };
 
-export default Graphrender;
+export default render;

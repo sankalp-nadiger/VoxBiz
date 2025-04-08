@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Signin from "./components/Signin";
 import Signup from "./components/Signup";
-import GraphSelector from "./components/GraphSelector";
+import Selectg from "./components/Selectgraph";
 import QueryProcessor from "./components/QueryProcessor";
 import GraphRender from "./components/GraphRender";
 import { ThreeDMarqueeBg } from "./pages/HomePage";
@@ -27,7 +27,7 @@ const App = () => {
         <Route path="/main" element={<MainPage />} />
         <Route path="/query" element={<QueryProcessor/>}/>
         <Route path="/table" element={<DataTable/>}/>
-        <Route path="/selectgraph" element={<GraphSelector/>}/>
+        <Route path="/selectgraph" element={<Selectg/>}/>
         <Route path="/rendergraph" element={<GraphRender/>}/>
         <Route path="/dblist" element={<DatabaseDashboard/>}/>
         <Route path="/visChoice" element={<VisualizationChoicePage/>}/>

@@ -107,7 +107,7 @@ const DatabaseDetailsPage = ( )=> {
       voiceSearch: "Search by voice",
       processing: "Processing...",
       actions: "Actions",
-      queryDatabase: "Query database with your voice",
+      Query: "Query database with your voice",
       dbCredentials: "Database Credentials",
       connectionString: "Connection String",
       permissions: "Permissions",

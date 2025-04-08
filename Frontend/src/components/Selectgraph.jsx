@@ -1,50 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GraphSelector from './GraphSelector';
+import Navbar from './Navbar';
 
-function Selectg() {
+function Selectg({ dbid = 'default_collection' }) {  // Destructure and provide default value
+  const [darkMode, setDarkMode] = useState(false);
   const [selectedGraph, setSelectedGraph] = useState(null);
-  const sampleData = {
-    sales: [
-      { month: "Jan", region: "North ", value: 1000, growth: 3.5 },
-       { month: "Feb", region: "North", value: 1350, growth: 12.5 },
-      { month: "Mar", region: "North", value: 1500, growth: 11.1 },
-    ],
-    marketShare: [
-      { region: " ", percentage: 0 },
-    ],
-    salesByCategory: [
-      { category: " ", value: 0 },
-    ],
-    performanceMetrics: [
-      { employee: "Alice", sales: 28500, customerSatisfaction: 9.2, returningCustomers: 78 },
-      { employee: "Bob", sales: 31200, customerSatisfaction: 8.7, returningCustomers: 65 },
-      { employee: "Charlie", sales: 26800, customerSatisfaction: 9.5, returningCustomers: 82 },
-      { employee: "Diana", sales: 35100, customerSatisfaction: 8.9, returningCustomers: 71 },
-      { employee: "Evan", sales: 29700, customerSatisfaction: 9.0, returningCustomers: 75 }
-    ]
-  };
+  const [dataToAnalyze, setDataToAnalyze] = useState([]);
   
-  // You can choose which part of the dataset to analyze
-  const dataToAnalyze = sampleData.sales; // or any other part of the dataset
+  useEffect(() => {
+    // Theme from localStorage
+    const storedMode = localStorage.getItem('mode');
+    if (storedMode) {
+      setDarkMode(storedMode === 'dark');
+    }
+    const handleThemeChange = (event) => {
+      const newTheme = event.detail.theme;
+      setDarkMode(newTheme === 'dark');
+    };
+    window.addEventListener('themeChange', handleThemeChange);
+    
+    // Fetch data from backend with dbid parameter
+    fetch(`http://localhost:5000/api/data?dbid=${dbid}`)
+      .then((res) => res.json())
+      .then((data) => {
+        // Take only the first 3 items from the data array
+        const limitedData = (data[dbid] || []).slice(0, 3);
+        setDataToAnalyze(limitedData);
+      })
+      .catch((err) => console.error('Error fetching data:', err));
+    
+    return () => {
+      window.removeEventListener('themeChange', handleThemeChange);
+    };
+  }, [dbid]); // Add dbid to dependency array
   
+  // Rest of your component code remains the same
   const handleSelectGraph = (graphType) => {
     setSelectedGraph(graphType);
     console.log(`Selected graph type: ${graphType}`);
-    // Here you would render the actual graph based on the selection
   };
-
+  
   return (
-    <div className="App p-6">
-      <h1 className="text-2xl font-bold mb-4">Graph Selection Demo</h1>
-      <GraphSelector 
-        data={dataToAnalyze} 
-        onSelectGraph={handleSelectGraph} 
-      />
-      
+    <div className={`App p-6 min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+      <Navbar darkMode={darkMode} />
+      <h1 className="text-2xl font-bold mb-4 text-center">Graph Selection Demo</h1>
+      <GraphSelector data={dataToAnalyze} onSelectGraph={handleSelectGraph} />
       {selectedGraph && (
-        <div className="mt-6 p-4 border rounded">
+        <div className="mt-6 p-4 border rounded border-gray-400 text-center">
           <h2 className="text-lg font-bold">Selected Graph: {selectedGraph}</h2>
-          <p>Here you would render the actual {selectedGraph} graph.</p>
+          <p>Here you would render the actual <strong>{selectedGraph}</strong> graph.</p>
         </div>
       )}
     </div>
