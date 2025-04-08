@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import GraphSelector from './GraphSelector';
 import Navbar from './Navbar';
+import { useLocation } from 'react-router-dom';
 
 function Selectg({ dbid = 'default_collection' }) {  // Destructure and provide default value
   const [darkMode, setDarkMode] = useState(false);
   const [selectedGraph, setSelectedGraph] = useState(null);
   const [dataToAnalyze, setDataToAnalyze] = useState([]);
+  const location = useLocation();
   
   useEffect(() => {
     // Theme from localStorage
@@ -20,19 +22,12 @@ function Selectg({ dbid = 'default_collection' }) {  // Destructure and provide 
     window.addEventListener('themeChange', handleThemeChange);
     
     // Fetch data from backend with dbid parameter
-    fetch(`http://localhost:5000/api/data?dbid=${dbid}`)
-      .then((res) => res.json())
-      .then((data) => {
-        // Take only the first 3 items from the data array
-        const limitedData = (data[dbid] || []).slice(0, 3);
-        setDataToAnalyze(limitedData);
-      })
-      .catch((err) => console.error('Error fetching data:', err));
+    const data = location.state?.visualizationData || [];
     
-    return () => {
-      window.removeEventListener('themeChange', handleThemeChange);
-    };
-  }, [dbid]); // Add dbid to dependency array
+    // Take only the first 3 items from the data array
+    const limitedData = data.slice(0, 3);
+    setDataToAnalyze(limitedData);
+  }, [location]);
   
   // Rest of your component code remains the same
   const handleSelectGraph = (graphType) => {

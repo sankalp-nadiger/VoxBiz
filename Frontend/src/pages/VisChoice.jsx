@@ -104,7 +104,7 @@ function VisualizationChoicePage() {
 
   // Navigate to graph view with data
   const navigateToGraphView = () => {
-    navigate("/graph-visualization", { state: { visualizationData: data } });
+    navigate("/selectgraph", { state: { visualizationData: data } });
   };
 
   return (
