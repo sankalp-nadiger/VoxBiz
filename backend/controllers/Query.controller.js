@@ -5,6 +5,103 @@ import axios from "axios";
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Sequelize } from "sequelize";
 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Cache schemas for multiple databases (keyed by databaseId)
+const dbSchemaCache = {};
+
+// Add the missing getDatabaseSchema function
+async function getDatabaseSchema(databaseId) {
+  if (dbSchemaCache[databaseId]) {
+    console.log("📦 Using cached DB schema for:", databaseId);
+    return dbSchemaCache[databaseId];
+  }
+
+  try {
+    const dbEntry = await Database.findByPk(databaseId);
+
+    if (!dbEntry || !dbEntry.connectionURI) {
+      throw new Error("Invalid database ID or missing connection URI.");
+    }
+
+    console.log("📡 Connecting to external DB:", dbEntry.databaseName);
+
+    // Temporary Sequelize instance
+    const tempSequelize = new Sequelize(dbEntry.connectionURI, {
+      dialect: "postgres",
+      logging: false,
+    });
+
+    const [tablesResult] = await tempSequelize.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `);
+
+    const tables = tablesResult.map((row) => row.table_name);
+    const schema = {};
+
+    for (const table of tables) {
+      const [columnsResult] = await tempSequelize.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = :table
+      `, {
+        replacements: { table },
+      });
+
+      schema[table] = columnsResult.map((row) => ({
+        name: row.column_name,
+        type: row.data_type,
+      }));
+    }
+
+    dbSchemaCache[databaseId] = schema;
+    console.log("✅ Fetched schema for", dbEntry.databaseName);
+    return schema;
+  } catch (error) {
+    console.error("❌ Error fetching schema for DB ID:", databaseId, error.message);
+    throw error;
+  }
+}
+
+// Helper function to call Gemini API
+async function callGeminiAPI(prompt) {
+  try {
+    const modelName = "gemini-1.5-flash";
+    const model = genAI.getGenerativeModel({ model: modelName });
+    
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+      },
+    });
+    
+    return result.response.text();
+  } catch (error) {
+    console.error("Gemini API error:", error);
+    throw new Error("Failed to generate mappings with Gemini API");
+  }
+}
+
+// Helper function to parse Gemini response
+function parseGeminiResponse(response) {
+  try {
+    // Find JSON content in the response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error("No valid JSON found in response");
+  } catch (error) {
+    console.error("Failed to parse Gemini response:", error);
+    return {};
+  }
+}
+
 // ✅ Controller to process voice → SQL → DB
 export const processQuery = async (req, res) => {
   const startTime = Date.now();
@@ -126,6 +223,7 @@ export const processQuery = async (req, res) => {
       ${JSON.stringify(businessMetrics, null, 2)}
       
       Natural language query: "${transcript}"
+     
       
       Rules:
       1. Generate only the SQL query with no explanations or comments

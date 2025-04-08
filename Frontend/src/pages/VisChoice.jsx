@@ -110,7 +110,7 @@ function VisualizationChoicePage() {
   return (
     <div className={`min-h-screen w-screen flex flex-col ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}
          style={{
-           backgroundImage: url('/choice-bg.png'),
+           backgroundImage: `url('/choice-bg.png')`,
            backgroundSize: 'cover',
            backgroundPosition: 'center',
            backgroundRepeat: 'no-repeat'

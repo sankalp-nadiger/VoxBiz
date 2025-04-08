@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";  
 import Navbar from './Navbar';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LabelList, ScatterChart,
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LabelList, ScatterChart,
   Scatter } from "recharts";
 import { useLocation } from "react-router-dom";
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -394,6 +394,7 @@ const Graphrender = () => {
                 <option value="area">Area Chart</option>
                 <option value="bar">Bar Chart</option>
                 <option value="pie">Pie Chart</option>
+                <option value="scatter">Scatter Chart</option>
               </select>
               <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                 <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">

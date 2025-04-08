@@ -6,37 +6,89 @@ import { differenceInDays } from 'date-fns';
 
 // Create a new database entry
 export const createDatabase = async (req, res) => {
-    try {
-        const { databaseName, host, port, username, password, connectionURI } = req.body;
-        const userId = req.user.id; // Extracted from Auth middleware
-        
-        let finalURI = connectionURI;
-        let finalDBName = databaseName;
-
-        if (!finalURI && host && port && username && password && databaseName) {
-            finalURI = `postgres://${username}:${password}@${host}:${port}/${databaseName}`;
-        }
-
-        if (!finalDBName && finalURI) {
-            finalDBName = new URL(finalURI).pathname.slice(1);
-        }
-
-        // Assign 'owner' role when creating a new database
-        const database = await Database.create({
-            userId,
-            databaseName: finalDBName,
-            host,
-            port,
-            username,
-            password,
-            connectionURI: finalURI,
-            role: "owner"
-        });
-
-        res.status(201).json({ message: "Database created successfully", database });
-    } catch (error) {
-        res.status(500).json({ error: "Failed to create database" });
+  try {
+    console.log("Create database route hit ->", req.user);
+    console.log("Body received ->", req.body);
+    
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: "Unauthorized: Missing user information" });
     }
+
+    const { databaseName, connectionURI } = req.body;
+    const userId = req.user.id;
+
+    if (!connectionURI) {
+      return res.status(400).json({ error: "Missing connection URI" });
+    }
+
+    let finalName = databaseName;
+    try {
+      if (!finalName) {
+        finalName = new URL(connectionURI).pathname.slice(1);
+      }
+    } catch (err) {
+      return res.status(400).json({ error: "Invalid connection URI format" });
+    }
+
+    // Check if database already exists for this user
+    const existingDatabase = await Database.findOne({
+      where: { userId, databaseName: finalName }
+    });
+
+    if (existingDatabase) {
+      return res.status(400).json({ error: "You already have a database with this name" });
+    }
+
+    // Verify connection before creating
+    try {
+      // Use getDatabaseSchema to validate the connection
+      const tempSequelize = new Sequelize(connectionURI, {
+        dialect: "postgres",
+        logging: false,
+        dialectOptions: {
+          ssl: false, // Set to true if needed
+          connectTimeout: 10000 // 10 seconds
+        }
+      });
+      
+      // Test the connection
+      await tempSequelize.authenticate();
+      console.log("✅ Connection test successful for new database");
+      await tempSequelize.close();
+    } catch (connError) {
+      console.error("❌ Connection test failed:", connError.message);
+      return res.status(400).json({ 
+        error: "Failed to connect with the provided URI",
+        details: connError.message
+      });
+    }
+
+    // Create the database entry with owner role
+    const database = await Database.create({
+      userId,
+      databaseName: finalName,
+      connectionURI,
+      role: "owner"
+    });
+
+    // Immediately cache the schema
+    try {
+      await getDatabaseSchema(database.id);
+      console.log("✅ Schema cached for new database");
+    } catch (schemaError) {
+      console.warn("⚠️ Could not cache schema:", schemaError.message);
+      // Continue even if schema caching fails
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Database created successfully",
+      database
+    });
+  } catch (error) {
+    console.error("Failed to create database:", error);
+    res.status(500).json({ error: "Failed to create database" });
+  }
 };
 
 // Connect to an existing database (read-only role)
