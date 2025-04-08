@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const FASTAPI_BASE_URL = process.env.FASTAPI_URL || "http://localhost:8000"; // Change as needed
+const FASTAPI_BASE_URL = process.env.FASTAPI_URL || "http://localhost:8000/process-query"; // Change as needed
 
 /**
  * Converts a natural language query into an SQL query using FastAPI.

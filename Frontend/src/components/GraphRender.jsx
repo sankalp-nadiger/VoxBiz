@@ -3,6 +3,7 @@ import axios from "axios";
 import Navbar from './Navbar';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LabelList, ScatterChart,
   Scatter } from "recharts";
+  import { useLocation } from 'react-router-dom';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -52,20 +53,22 @@ const Graphrender = () => {
   });
 
   // Fetch chart data from backend
-  const fetchChartData = async () => {
+  
+
+  // Inside your component:
+  const location = useLocation();
+  
+  const fetchChartData = () => {
     try {
       setloading(prev => ({ ...prev, chart: true }));
       setError(prev => ({ ...prev, chart: null }));
       
-      const response = await axios.get(`${API_BASE_URL}/chart-data`, {
-        params: {
-          DBid:DBid
-        }
-      });
+      // Get data from location state instead of API call
+      const data = location.state?.visualizationData || [];
       
-      setChartData(response.data);
+      setChartData(data);
     } catch (err) {
-      console.error("Error fetching chart data:", err);
+      console.error("Error processing chart data:", err);
       setError(prev => ({ ...prev, chart: "Failed to load chart data" }));
     } finally {
       setloading(prev => ({ ...prev, chart: false }));

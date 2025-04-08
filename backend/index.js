@@ -15,12 +15,13 @@ import ChatBotRoutes from "./routes/ChatBot.route.js";
 //   .catch((err) => console.error("DB sync error:", err));
 
 // Load environment variables
+sequelize.sync();
 dotenv.config();
 
 const app = express();
 
 app.use(cors({
-  origin: "http://localhost:5173", // ✅ Your frontend origin
+  origin: "http://localhost:5175", // ✅ Your frontend origin
   credentials: true                // ✅ Required to send/receive cookies
 }));
 app.use(express.json()); // Parse JSON bodies
