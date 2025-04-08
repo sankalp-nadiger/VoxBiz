@@ -36,9 +36,9 @@ export const executeQuery = async (dbEntry, sqlQuery) => {
 
         console.log("✅ Query executed successfully.");
 
-        // 🔹 Step 3: Close the connection after execution
-        await sequelize.close();
-        console.log("🔌 Database connection closed.");
+        // // 🔹 Step 3: Close the connection after execution
+        // await sequelize.close();
+        // console.log("🔌 Database connection closed.");
 
         return results; // Return query results
 

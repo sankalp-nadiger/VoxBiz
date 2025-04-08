@@ -51,7 +51,7 @@ const Graphrender = () => {
     history: null
   });
   const [chartSettings, setChartSettings] = useState({
-    showLegend: true,
+    showLegend: false,
     showGrid: true,
     showDataLabels: false,
     colorPalette: 0,
@@ -914,58 +914,137 @@ const EnhancedGraphRender = ({ data, graphType, darkMode, isFullScreen, setIsFul
 // ... (rest of the components remain the same, but update AIInsightsPanel to handle loading and error states) ...
 const AIInsightsPanel = ({ data, graphType, darkMode }) => {
   const [insights, setInsights] = useState([]);
-  const [loading, setloading] = useState(true); // Fixed variable name from setIsloading
-  const [error, setError] = useState(null); // Added error state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentInsightIndex, setCurrentInsightIndex] = useState(null);
-  const [explanation, setExplanation] = useState(''); // Added explanation state
-  const [suggestions, setSuggestions] = useState(''); // Added suggestions state
+  const [explanation, setExplanation] = useState('');
+  const [suggestions, setSuggestions] = useState('');
+  const [roadmap, setRoadmap] = useState(null);
+  const [industryHistory, setIndustryHistory] = useState([]);
+  const [goalsHistory, setGoalsHistory] = useState([]);
+  const [challengesHistory, setChallengesHistory] = useState([]);
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false);
+  const [showGoalsDropdown, setShowGoalsDropdown] = useState(false);
+  const [showChallengesDropdown, setShowChallengesDropdown] = useState(false);
   
+  // Onboarding state
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [businessInfo, setBusinessInfo] = useState({
+    industry: '',
+    stage: 'startup',
+    revenue: '',
+    employees: '',
+    goals: '',
+    challenges: ''
+  });
+
   // Process data for insights
   useEffect(() => {
     if (!data || data.length === 0) {
       setInsights([]);
-      setloading(false);
+      setLoading(false);
       return;
     }
-    
-    setloading(true);
-    setError(null); // Reset error state when fetching new data
-    generateInsights(data, graphType)
-      .then(generatedInsights => {
-        setInsights(generatedInsights);
-        
-        // Generate explanation and suggestions from insights
-        if (generatedInsights && generatedInsights.length > 0) {
-          const explanationText = "Based on the analysis of your data, here are the key insights we've identified.";
-          setExplanation(explanationText);
-          
-          // Convert insights to bullet-point suggestions
-          const suggestionsText = generatedInsights.map(insight => 
-            `• ${insight.title}: ${insight.description}`
-          ).join('\n\n');
-          
-          setSuggestions(suggestionsText);
-        }
-        
-        setloading(false);
-      })
-      .catch(err => {
-        console.error("Error generating insights:", err);
-        setError("Failed to generate AI insights. Please try again later.");
-        setInsights([
-          {
-            title: "Error Generating Insights",
-            description: "Failed to generate AI insights. Please try again later.",
-            type: "error"
-          }
-        ]);
-        setloading(false);
-      });
   }, [data, graphType]);
 
-  // Generate AI insights using Gemini API
-  const generateInsights = async (data, chartType) => {
+  useEffect(() => {
+    try {
+      // Load history from localStorage
+      const storedIndustryHistory = localStorage.getItem('industryHistory');
+      const storedGoalsHistory = localStorage.getItem('goalsHistory');
+      const storedChallengesHistory = localStorage.getItem('challengesHistory');
+      
+      // Parse and set history (if exists)
+      if (storedIndustryHistory) {
+        setIndustryHistory(JSON.parse(storedIndustryHistory));
+      }
+      
+      if (storedGoalsHistory) {
+        setGoalsHistory(JSON.parse(storedGoalsHistory));
+      }
+      
+      if (storedChallengesHistory) {
+        setChallengesHistory(JSON.parse(storedChallengesHistory));
+      }
+    } catch (error) {
+      console.error("Error loading history from localStorage:", error);
+    }
+  }, []);
+  
+  const saveInputToHistory = (type, value) => {
+    if (!value.trim()) return; // Don't save empty values
+    
+    try {
+      switch (type) {
+        case 'industry':
+          // Add to industry history if not already there
+          if (!industryHistory.includes(value)) {
+            const updatedIndustryHistory = [value, ...industryHistory].slice(0, 5); // Keep only latest 5
+            setIndustryHistory(updatedIndustryHistory);
+            localStorage.setItem('industryHistory', JSON.stringify(updatedIndustryHistory));
+          }
+          break;
+          
+        case 'goals':
+          // Add to goals history if not already there
+          if (!goalsHistory.includes(value)) {
+            const updatedGoalsHistory = [value, ...goalsHistory].slice(0, 5); // Keep only latest 5
+            setGoalsHistory(updatedGoalsHistory);
+            localStorage.setItem('goalsHistory', JSON.stringify(updatedGoalsHistory));
+          }
+          break;
+          
+        case 'challenges':
+          // Add to challenges history if not already there
+          if (!challengesHistory.includes(value)) {
+            const updatedChallengesHistory = [value, ...challengesHistory].slice(0, 5); // Keep only latest 5
+            setChallengesHistory(updatedChallengesHistory);
+            localStorage.setItem('challengesHistory', JSON.stringify(updatedChallengesHistory));
+          }
+          break;
+          
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error(`Error saving ${type} to history:`, error);
+    }
+  };
+  
+
+  // Handle onboarding input changes
+  const handleInputChange = (field, value) => {
+    setBusinessInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Modified function to handle dropdown item selection
+  const handleHistoryItemClick = (field, value) => {
+    // Update the input field
+    handleInputChange(field, value);
+    
+    // Close the dropdown
+    switch (field) {
+      case 'industry':
+        setShowIndustryDropdown(false);
+        break;
+      case 'goals':
+        setShowGoalsDropdown(false);
+        break;
+      case 'challenges':
+        setShowChallengesDropdown(false);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Generate AI insights using Gemini API with business context
+  const generateInsights = async (data, chartType, businessContext) => {
     try {
       const dataContext = JSON.stringify(data.slice(0, 10));
   
@@ -977,15 +1056,60 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
               parts: [
                 {
                   text: `Based on this chart data: ${dataContext} 
-                  Generate 3-4 business insights and recommendations. The chart type is ${chartType}.
+                  
+                  Business Context:
+                  Industry: ${businessContext.industry}
+                  Business Stage: ${businessContext.stage}
+                  Current Revenue: ${businessContext.revenue}
+                  Number of Employees: ${businessContext.employees}
+                  Business Goals: ${businessContext.goals}
+                  Current Challenges: ${businessContext.challenges}
+                  
+                  The chart type is ${chartType}.
+                  
+                  First, provide a brief explanation of what the chart is showing.
+                  
+                  Then, generate 3-4 business insights and recommendations based on the data and business context.
+                  
+                  Finally, create a 6-month strategic roadmap with specific actionable steps for each month.
+                  
                   Format the response as JSON with this structure:
-                  [
-                    {
-                      "title": "Insight title",
-                      "description": "Detailed insight and recommendation",
-                      "type": "trend|anomaly|opportunity|risk"
+                  {
+                    "chartExplanation": "Brief explanation of what the chart is showing and key patterns",
+                    "insights": [
+                      {
+                        "title": "Insight title",
+                        "description": "Detailed insight and recommendation",
+                        "type": "trend|anomaly|opportunity|risk"
+                      }
+                    ],
+                    "roadmap": {
+                      "month1": {
+                        "title": "Month 1: [Focus Area]",
+                        "actions": ["Action 1", "Action 2", "Action 3"]
+                      },
+                      "month2": {
+                        "title": "Month 2: [Focus Area]",
+                        "actions": ["Action 1", "Action 2", "Action 3"]
+                      },
+                      "month3": {
+                        "title": "Month 3: [Focus Area]",
+                        "actions": ["Action 1", "Action 2", "Action 3"]
+                      },
+                      "month4": {
+                        "title": "Month 4: [Focus Area]",
+                        "actions": ["Action 1", "Action 2", "Action 3"]
+                      },
+                      "month5": {
+                        "title": "Month 5: [Focus Area]",
+                        "actions": ["Action 1", "Action 2", "Action 3"]
+                      },
+                      "month6": {
+                        "title": "Month 6: [Focus Area]",
+                        "actions": ["Action 1", "Action 2", "Action 3"]
+                      }
                     }
-                  ]`
+                  }`
                 }
               ]
             }
@@ -994,51 +1118,77 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
       );
   
       const generatedText = response?.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
   
       if (jsonMatch) {
-        const parsedInsights = JSON.parse(jsonMatch[0]);
-        return parsedInsights.slice(0, 4);
+        return JSON.parse(jsonMatch[0]);
       }
       
-      return [];
+      return {
+        chartExplanation: "Unable to analyze the chart data.",
+        insights: [],
+        roadmap: {}
+      };
     } catch (error) {
       console.error("Error calling Gemini API:", error);
       throw error;
     }
   };
-  
 
-  // Function to fetch insights - referenced in the UI but was missing
+  // Process AI response and update states
+  const processAIResponse = (response) => {
+    if (response) {
+      // Set chart explanation
+      setExplanation(response.chartExplanation || "");
+      
+      // Set insights
+      setInsights(response.insights || []);
+      
+      // Convert insights to bullet-point suggestions
+      const suggestionsText = (response.insights || []).map(insight => 
+        `• ${insight.title}: ${insight.description}`
+      ).join('\n\n');
+      
+      setSuggestions(suggestionsText);
+      
+      // Set roadmap
+      setRoadmap(response.roadmap || null);
+    }
+  };
+
+  // Function to fetch insights with business context
   const fetchAIInsights = () => {
-    setloading(true);
+    setLoading(true);
     setError(null);
     
-    // Re-run the insights generation
-    generateInsights(data, graphType)
-      .then(generatedInsights => {
-        setInsights(generatedInsights);
-        
-        // Generate explanation and suggestions from insights
-        if (generatedInsights && generatedInsights.length > 0) {
-          const explanationText = "Based on the analysis of your data, here are the key insights we've identified.";
-          setExplanation(explanationText);
-          
-          // Convert insights to bullet-point suggestions
-          const suggestionsText = generatedInsights.map(insight => 
-            `• ${insight.title}: ${insight.description}`
-          ).join('\n\n');
-          
-          setSuggestions(suggestionsText);
-        }
-        
-        setloading(false);
+    generateInsights(data, graphType, businessInfo)
+      .then(response => {
+        processAIResponse(response);
+        setShowOnboarding(false); // Close onboarding after processing
+        setLoading(false);
       })
       .catch(err => {
         console.error("Error generating insights:", err);
         setError("Failed to generate AI insights. Please try again later.");
-        setloading(false);
+        setLoading(false);
       });
+  };
+
+  // Start onboarding
+  const startOnboarding = () => {
+    setShowOnboarding(true);
+    setOnboardingStep(0);
+  };
+
+  // Handle onboarding completion
+  const completeOnboarding = () => {
+    // Save current inputs to history
+    if (businessInfo.industry) saveInputToHistory('industry', businessInfo.industry);
+    if (businessInfo.goals) saveInputToHistory('goals', businessInfo.goals);
+    if (businessInfo.challenges) saveInputToHistory('challenges', businessInfo.challenges);
+    
+    // Continue with existing functionality
+    fetchAIInsights();
   };
 
   // Handle text-to-speech for insights
@@ -1143,11 +1293,266 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
         return darkMode ? 'purple-400' : 'purple-500';
     }
   };
+  
+  // Modified input with history component that properly handles dropdown selection
+  const renderInputWithHistory = (field, value, placeholder, historyItems, showDropdown, setShowDropdown) => {
+    return (
+      <div className="relative">
+        <input
+          type="text"
+          className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => handleInputChange(field, e.target.value)}
+          onFocus={() => setShowDropdown(true)}
+        />
+        
+        {/* History dropdown - removed onBlur event that was causing the issue */}
+        {showDropdown && historyItems.length > 0 && (
+          <div className={`absolute z-10 mt-1 w-full border rounded shadow-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'}`}>
+            {historyItems.map((item, index) => (
+              <div
+                key={index}
+                className={`p-2 cursor-pointer ${darkMode ? 'hover:bg-gray-600 text-gray-200' : 'hover:bg-gray-100 text-gray-800'}`}
+                // Use mousedown instead of click to ensure it fires before blur
+                onMouseDown={(e) => {
+                  e.preventDefault(); // Prevent focus loss
+                  handleHistoryItemClick(field, item);
+                }}
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // Onboarding form components based on current step
+  const renderOnboardingStep = () => {
+    switch (onboardingStep) {
+      case 0:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">About Your Business</h3>
+            <div>
+              <label className={`block mb-1 font-medium text-${darkMode ? 'gray-300' : 'gray-700'}`}>
+                Industry
+              </label>
+              {renderInputWithHistory(
+                'industry',
+                businessInfo.industry,
+                "e.g. SaaS, E-commerce, Health Tech",
+                industryHistory,
+                showIndustryDropdown,
+                setShowIndustryDropdown
+              )}
+            </div>
+            <div>
+              <label className={`block mb-1 font-medium text-${darkMode ? 'gray-300' : 'gray-700'}`}>
+                Business Stage
+              </label>
+              <select
+                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                value={businessInfo.stage}
+                onChange={(e) => handleInputChange('stage', e.target.value)}
+              >
+                <option value="startup">Startup</option>
+                <option value="growth">Growth</option>
+                <option value="established">Established</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setOnboardingStep(1)}
+                className={`px-4 py-2 bg-${darkMode ? 'blue-600' : 'blue-500'} hover:bg-${darkMode ? 'blue-700' : 'blue-600'} text-white rounded`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      
+      case 1:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Business Details</h3>
+            <div>
+              <label className={`block mb-1 font-medium text-${darkMode ? 'gray-300' : 'gray-700'}`}>
+                Current Revenue
+              </label>
+              <input
+                type="text"
+                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                placeholder="e.g. $100K annually, $10K monthly"
+                value={businessInfo.revenue}
+                onChange={(e) => handleInputChange('revenue', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={`block mb-1 font-medium text-${darkMode ? 'gray-300' : 'gray-700'}`}>
+                Number of Employees
+              </label>
+              <input
+                type="text"
+                className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                placeholder="e.g. 5, 20-50, 100+"
+                value={businessInfo.employees}
+                onChange={(e) => handleInputChange('employees', e.target.value)}
+              />
+            </div>
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={() => setOnboardingStep(0)}
+                className={`px-4 py-2 bg-${darkMode ? 'gray-600' : 'gray-300'} hover:bg-${darkMode ? 'gray-700' : 'gray-400'} text-${darkMode ? 'white' : 'gray-800'} rounded`}
+              >
+                Back
+              </button>
+              <button
+                onClick={() => setOnboardingStep(2)}
+                className={`px-4 py-2 bg-${darkMode ? 'blue-600' : 'blue-500'} hover:bg-${darkMode ? 'blue-700' : 'blue-600'} text-white rounded`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+        
+      case 2:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Business Goals & Challenges</h3>
+            <div>
+              <label className={`block mb-1 font-medium text-${darkMode ? 'gray-300' : 'gray-700'}`}>
+                Business Goals
+              </label>
+              {/* Modified textarea with history implementation */}
+              <div className="relative">
+                <textarea
+                  className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                  placeholder="e.g. Increase customer retention, Expand to new markets"
+                  rows={3}
+                  value={businessInfo.goals}
+                  onChange={(e) => handleInputChange('goals', e.target.value)}
+                  onFocus={() => setShowGoalsDropdown(true)}
+                />
+                
+                {/* History dropdown for goals - modified to use mousedown */}
+                {showGoalsDropdown && goalsHistory.length > 0 && (
+                  <div className={`absolute z-10 mt-1 w-full border rounded shadow-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'}`}>
+                    {goalsHistory.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`p-2 cursor-pointer ${darkMode ? 'hover:bg-gray-600 text-gray-200' : 'hover:bg-gray-100 text-gray-800'}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleHistoryItemClick('goals', item);
+                        }}
+                      >
+                        {item.length > 50 ? item.substring(0, 50) + '...' : item}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className={`block mb-1 font-medium text-${darkMode ? 'gray-300' : 'gray-700'}`}>
+                Current Challenges
+              </label>
+              {/* Modified textarea with history implementation */}
+              <div className="relative">
+                <textarea
+                  className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                  placeholder="e.g. High customer acquisition cost, Seasonal sales fluctuations"
+                  rows={3}
+                  value={businessInfo.challenges}
+                  onChange={(e) => handleInputChange('challenges', e.target.value)}
+                  onFocus={() => setShowChallengesDropdown(true)}
+                />
+                
+                {/* History dropdown for challenges - modified to use mousedown */}
+                {showChallengesDropdown && challengesHistory.length > 0 && (
+                  <div className={`absolute z-10 mt-1 w-full border rounded shadow-lg ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'}`}>
+                    {challengesHistory.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`p-2 cursor-pointer ${darkMode ? 'hover:bg-gray-600 text-gray-200' : 'hover:bg-gray-100 text-gray-800'}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleHistoryItemClick('challenges', item);
+                        }}
+                      >
+                        {item.length > 50 ? item.substring(0, 50) + '...' : item}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={() => setOnboardingStep(1)}
+                className={`px-4 py-2 bg-${darkMode ? 'gray-600' : 'gray-300'} hover:bg-${darkMode ? 'gray-700' : 'gray-400'} text-${darkMode ? 'white' : 'gray-800'} rounded`}
+              >
+                Back
+              </button>
+              <button
+                onClick={completeOnboarding}
+                className={`px-4 py-2 bg-${darkMode ? 'green-600' : 'green-500'} hover:bg-${darkMode ? 'green-700' : 'green-600'} text-white rounded`}
+              >
+                Generate Insights & Roadmap
+              </button>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
+  
+  // Render business roadmap
+  const renderRoadmap = () => {
+    if (!roadmap) return null;
+    
+    const months = ['month1', 'month2', 'month3', 'month4', 'month5', 'month6'];
+    
+    return (
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4">Your 6-Month Strategic Roadmap</h3>
+        <div className="space-y-6">
+          {months.map((month, index) => {
+            if (!roadmap[month]) return null;
+            
+            return (
+              <div 
+                key={month} 
+                className={`p-4 rounded-lg border ${darkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}
+              >
+                <h4 className={`font-medium text-${darkMode ? 'blue-400' : 'blue-600'} mb-2`}>
+                  {roadmap[month].title}
+                </h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  {roadmap[month].actions.map((action, actionIndex) => (
+                    <li key={actionIndex} className={`text-${darkMode ? 'gray-300' : 'gray-700'}`}>
+                      {action}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className={`rounded-lg shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'} transition-all duration-300 h-full flex flex-col`}>
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-        <h2 className="text-lg font-bold">AI Data Insights</h2>
+        <h2 className="text-lg font-bold">AI Business Insights</h2>
         <div className="flex items-center">
           <button 
             onClick={() => {
@@ -1176,7 +1581,7 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
             )}
           </button>
           <button 
-            onClick={fetchAIInsights}
+            onClick={startOnboarding}
             className={`p-2 rounded-full ${
               loading
                 ? `bg-gray-500 cursor-not-allowed` 
@@ -1194,7 +1599,11 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
       </div>
       
       <div className="p-4 flex-grow overflow-y-auto">
-        {error ? (
+        {showOnboarding ? (
+          <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-750' : 'bg-white'}`}>
+            {renderOnboardingStep()}
+          </div>
+        ) : error ? (
           <div className={`flex flex-col items-center justify-center h-full text-${darkMode ? 'red-400' : 'red-600'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1218,29 +1627,31 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
-            <p className="text-center">Generate AI insights to analyze your data</p>
+            <p className="text-center">Generate AI insights and a strategic roadmap for your business</p>
             <button 
-              onClick={fetchAIInsights}
+              onClick={startOnboarding}
               className={`mt-4 px-4 py-2 bg-${darkMode ? 'blue-600' : 'blue-500'} hover:bg-${darkMode ? 'blue-700' : 'blue-600'} text-white rounded`}
             >
-              Generate Insights
+              Get Started
             </button>
           </div>
         ) : (
           <>
             <div className="mb-6">
-              <h3 className="text-md font-semibold mb-2">Explanation</h3>
+              <h3 className="text-md font-semibold mb-2">Chart Analysis</h3>
               <p className={`text-${darkMode ? 'gray-300' : 'gray-700'}`}>{explanation}</p>
             </div>
             
-            <div>
-              <h3 className="text-md font-semibold mb-2">Insights & Recommendations</h3>
+            <div className="mb-6">
+              <h3 className="text-md font-semibold mb-2">Business Insights & Recommendations</h3>
               <div className={`text-${darkMode ? 'gray-300' : 'gray-700'} whitespace-pre-line`}>
                 {suggestions.split('\n').map((line, index) => (
-                  <p key={index} className={line.trim().startsWith('•') ? 'ml-4' : ''}>{line}</p>
+                  <p key={index} className={line.trim().startsWith('•') ? 'ml-4 mb-3' : ''}>{line}</p>
                 ))}
               </div>
             </div>
+            
+            {renderRoadmap()}
           </>
         )}
       </div>
