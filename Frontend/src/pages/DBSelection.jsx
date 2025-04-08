@@ -181,6 +181,56 @@ setDatabases(data);
     navigateToDatabase(dbId);
   };
 
+
+  const handleDbVoiceQuery = (dbId) => {
+    setProcessingVoice(true);
+
+    if (!dbId) {
+      setProcessingVoice(false);
+      setErrorMessage('Database ID not found. Please try again.');
+      return;
+    }
+    // Check if query is empty
+    if (!query) {
+      console.error("Query is empty");
+      setProcessingVoice(false);
+      setErrorMessage('Query cannot be empty. Please try again.');
+      return;
+    }
+    // Make an API call to the backend database service
+    fetch('http://localhost:3000/api/query/process/${dbId}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Include cookies for authentication
+      body: JSON.stringify({ transcript: query }) 
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Database query failed');
+        }
+        return response.json();
+      })
+      .then(response => {
+        console.log("Database query successful:", response.data);
+        setProcessingVoice(false);
+        // On success, navigate to the choice page
+        navigate('/visChoice', { state: { queryResponse: response.data } });
+      })
+      .catch(error => {
+        console.error("Error processing database query:", error);
+        setProcessingVoice(false);
+        
+        // Show failure message
+        setErrorMessage('Database query failed. Please try again.');
+        
+        // Clear error message after 5 seconds
+        setTimeout(() => {
+          setErrorMessage('');
+        }, 5000);
+      });
+  };
   const navigateToDatabase = async (dbId) => {
     try {
       // Save dbId to localStorage
@@ -671,16 +721,19 @@ setDatabases(data);
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
                   <tr>
-                    <th className="px-3 py-2 text-left text-xxs font-medium uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xxs font-medium uppercase tracking-wider">
                       {translations.dbName}
                     </th>
-                    <th className="px-3 py-2 text-left text-xxs font-medium uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xxs font-medium uppercase tracking-wider">
                       {translations.accessLevel}
                     </th>
-                    <th className="px-3 py-2 text-left text-xxs font-medium uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xxs font-medium uppercase tracking-wider">
                       {translations.lastAccessed}
                     </th>
-                    <th className="px-3 py-2 text-left text-xxs font-medium uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xxs font-medium uppercase tracking-wider">
+                      {translations.preview}
+                    </th>
+                    <th className="px-3 py-3 text-left text-xxs font-medium uppercase tracking-wider">
                       {translations.actions}
                     </th>
                   </tr>
@@ -688,8 +741,8 @@ setDatabases(data);
                 <tbody className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
                   {databases.map((db) => (
                     <tr key={db.id} className={`cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-                      <td className="px-3 py-2 text-xs whitespace-nowrap">{db.name}</td>
-                      <td className="px-3 py-2 text-xs whitespace-nowrap">
+                      <td className="px-3 py-4 text-xs whitespace-nowrap">{db.name}</td>
+                      <td className="px-3 py-4 text-xs whitespace-nowrap">
                         <span className={`px-1 py-0.5 inline-flex text-xxs leading-4 font-semibold rounded-full ${
                           db.accessLevel === 'read-only' 
                             ? (darkMode ? 'bg-yellow-800 text-yellow-100' : 'bg-yellow-100 text-yellow-800')
@@ -698,24 +751,62 @@ setDatabases(data);
                           {db.accessLevel === 'read-only' ? translations.readOnly : translations.readWrite}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-xs whitespace-nowrap">{new Date(db.lastAccessed).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 text-xs whitespace-nowrap">
-                        <div className="inline-block relative">
-                          <button
-                            onClick={() => navigateToDatabase(db.id)}
-                            className={`p-1 rounded ${
-                              darkMode 
-                                ? 'bg-blue-600 hover:bg-blue-700' 
-                                : 'bg-blue-500 hover:bg-blue-600'
-                            } text-white group`}
-                            title={translations.queryDatabase}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
+                      <td className="px-3 py-4 text-xs whitespace-nowrap">{new Date(db.lastAccessed).toLocaleDateString()}</td>
+                      <td className="px-3 py-4 text-xs whitespace-nowrap">
+                        <DbPreviewOption 
+                          dbId={db.id} 
+                          dbName={db.name} 
+                          darkMode={darkMode} 
+                        />
+                      </td>
+                      <td className="px-3 py-4 text-xs whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          {/* Voice Query Button */}
+                          <div className="relative group">
+                            <button
+                              onClick={() => handleDbVoiceQuery(db.id)}
+                              className={`p-1 rounded-full ${
+                                darkMode 
+                                  ? 'bg-purple-600 hover:bg-purple-700' 
+                                  : 'bg-purple-500 hover:bg-purple-600'
+                              } text-white`}
+                              title={translations.voiceQueryDb}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                              </svg>
+                            </button>
                             
                             {/* Tooltip */}
-                            <div className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs rounded whitespace-nowrap hidden group-hover:block z-50 ${
+                            <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+                              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-800 text-white'
+                            }`}>
+                              Query by voice
+                              {/* Triangle pointer */}
+                              <div className={`absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent ${
+                                darkMode ? 'border-t-gray-700' : 'border-t-gray-800'
+                              }`}></div>
+                            </div>
+                          </div>
+                          
+                          {/* Navigate Button */}
+                          <div className="relative group">
+                            <button
+                              onClick={() => navigateToDatabase(db.id)}
+                              className={`p-1 rounded ${
+                                darkMode 
+                                  ? 'bg-blue-600 hover:bg-blue-700' 
+                                  : 'bg-blue-500 hover:bg-blue-600'
+                              } text-white`}
+                              title={translations.queryDatabase}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                              </svg>
+                            </button>
+                            
+                            {/* Tooltip */}
+                            <div className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs rounded whitespace-nowrap hidden group-hover:block z-40 ${
                               darkMode ? 'bg-gray-700 text-white' : 'bg-gray-800 text-white'
                             }`}>
                               Use to query
@@ -724,7 +815,7 @@ setDatabases(data);
                                 darkMode ? 'border-t-gray-700' : 'border-t-gray-800'
                               }`}></div>
                             </div>
-                          </button>
+                          </div>
                         </div>
                       </td>
                     </tr>

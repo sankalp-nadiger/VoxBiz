@@ -188,7 +188,7 @@ const DatabaseDetailsPage = ( )=> {
     fetch(`http://localhost:3000/api/query/process/${dbId}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json',        
       },
       credentials: 'include', // Include cookies for authentication
       body: JSON.stringify({ transcript: query }) 

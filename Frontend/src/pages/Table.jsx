@@ -1,10 +1,12 @@
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { List, ListItem, ListItemButton, ListItemText} from '@mui/material';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 import Box from '@mui/material/Box';
-import List from '@mui/material/List';
 import { Divider } from '@mui/material';
 import TextField from '@mui/material/TextField';
+import DownloadIcon from '@mui/icons-material/Download';
 import { Drawer } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
@@ -13,8 +15,10 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import MicOffIcon from '@mui/icons-material/MicOff';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import DialogActions from '@mui/material/DialogActions';
 import MicIcon from '@mui/icons-material/Mic';
+import {ButtonBase} from '@mui/material';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -26,6 +30,7 @@ import TableSortLabel from '@mui/material/TableSortLabel';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
+import EmailIcon from '@mui/icons-material/Email';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
@@ -46,6 +51,8 @@ import { alpha } from '@mui/material/styles';
 import { visuallyHidden } from '@mui/utils';
 import Navbar from '../components/Navbar';
 import { useLocation } from 'react-router-dom';
+import EmailDataModal from '../components/EmailDataModal';
+import ScheduleEmailModal from '../components/ScheduleEmail';
 
 function createData(id, name, calories, fat, carbs, protein) {
   return { id, name, calories, fat, carbs, protein };
@@ -373,7 +380,9 @@ export default function DataTable() {
   const [orderBy, setOrderBy] = useState('calories');
   const [selected, setSelected] = useState([]);
   const [page, setPage] = useState(0);
-// Add this to your existing useState declarations
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedQuery, setSelectedQuery] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 const [customColumns, setCustomColumns] = useState([]);
   const [dense, setDense] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -389,14 +398,110 @@ const [customColumns, setCustomColumns] = useState([]);
   const [translations, setTranslations] = useState({});
   const [customQuery, setCustomQuery] = useState('');
   const [filterOptions, setFilterOptions] = useState({
-    category: ['Desserts', 'Main Courses', 'Appetizers'],
-    dietaryRestrictions: ['Vegetarian', 'Vegan', 'Gluten-Free']
   });
   const [densePaddingLabel, setDensePaddingLabel] = useState('Dense padding');
 
-  // Sample API endpoint - replace with your actual API endpoint
-  const API_ENDPOINT = "http://localhost:8000/api/query/data";
+  const handleClearHistory = async () => {
+    try {
+      // Get the database ID from wherever it's available
+      const databaseId = location.state?.databaseId || localStorage.getItem('currentDatabaseId');
+      
+      if (!databaseId) {
+        console.error("No database ID available");
+        return;
+      }
+      
+      // Show confirmation dialog
+      if (!window.confirm('Are you sure you want to clear your query history?')) {
+        return;
+      }
+      
+      // Call the backend API to delete history
+      const response = await fetch(`http://localhost:8000/api/databases/${databaseId}/history`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to clear history: ${response.status}`);
+      }
+      
+      // Clear local state
+      setQueryHistory([]);
+      
+      // Clear from localStorage too
+      localStorage.removeItem('queryHistory');
+      
+      // Optionally show a success notification
+      if (typeof showNotification === 'function') {
+        showNotification('Query history cleared successfully', 'success');
+      }
+    } catch (error) {
+      console.error("Error clearing history:", error);
+      
+      // Optionally show an error notification
+      if (typeof showNotification === 'function') {
+        showNotification('Failed to clear history', 'error');
+      }
+    }
+  };
 
+  const handleDownloadCSV= () => {
+    try {
+      // Create CSV from filtered rows (current view data)
+      const headers = Object.keys(filteredRows[0] || {}).filter(key => 
+        customColumns && customColumns.length > 0 
+          ? customColumns.includes(key) 
+          : true
+      ).join(',');
+      
+      const csvRows = filteredRows.map(row => {
+        return Object.keys(row)
+          .filter(key => 
+            customColumns && customColumns.length > 0 
+              ? customColumns.includes(key) 
+              : true
+          )
+          .map(key => {
+            // Handle CSV special characters
+            let cellValue = row[key];
+            
+            // Convert to string and handle nulls/undefined
+            cellValue = cellValue === null || cellValue === undefined ? '' : String(cellValue);
+            
+            // If contains comma, quote, or newline, wrap in quotes and escape internal quotes
+            if (cellValue.includes(',') || cellValue.includes('"') || cellValue.includes('\n')) {
+              cellValue = '"' + cellValue.replace(/"/g, '""') + '"';
+            }
+            
+            return cellValue;
+          })
+          .join(',');
+      });
+      
+      const csvContent = [headers, ...csvRows].join('\n');
+      
+      // Create blob and trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${tableTitle.replace(/\s+/g, '_')}_data_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Show success notification (if you have notification system)
+      // setNotification({ open: true, message: 'Download successful', severity: 'success' });
+    } catch (error) {
+      console.error('Error downloading data:', error);
+      // Show error notification (if you have notification system)
+      // setNotification({ open: true, message: 'Download failed', severity: 'error' });
+    }
+  };
+  let data;
   // Fetch data from backend
   useEffect(() => {
     const processData = async () => {
@@ -404,38 +509,18 @@ const [customColumns, setCustomColumns] = useState([]);
         setLoading(true);
         
         // Use the data passed as prop instead of fetching
-        const data = location.state?.visualizationData;
+         data = location.state?.visualizationData;
         
         if (!data || data.length === 0) {
-          console.log("No data received from props, using sample data instead");
-          // Sample data as fallback
-          const sampleRows = [
-            createData(1, 'Cupcake', 305, 3.7, 67, 4.3),
-            createData(2, 'Donut', 452, 25.0, 51, 4.9),
-            createData(3, 'Eclair', 262, 16.0, 24, 6.0),
-            createData(4, 'Frozen yoghurt', 159, 6.0, 24, 4.0),
-            createData(5, 'Gingerbread', 356, 16.0, 49, 3.9),
-            createData(6, 'Honeycomb', 408, 3.2, 87, 6.5),
-            createData(7, 'Ice cream sandwich', 237, 9.0, 37, 4.3),
-            createData(8, 'Jelly Bean', 375, 0.0, 94, 0.0),
-            createData(9, 'KitKat', 518, 26.0, 65, 7.0),
-            createData(10, 'Lollipop', 392, 0.2, 98, 0.0),
-            createData(11, 'Marshmallow', 318, 0, 81, 2.0),
-            createData(12, 'Nougat', 360, 19.0, 9, 37.0),
-            createData(13, 'Oreo', 437, 18.0, 63, 4.0),
-          ];
+          console.log("No data received from props");
+          // Instead of using sample data, just set empty arrays
+          setRows([]);
+          setFilteredRows([]);
+          setTableTitle('No Data Available');
           
-          setRows(sampleRows);
-          setFilteredRows(sampleRows);
-          setTableTitle('Nutrition Data');
-          
-          const dynamicHeadCells = generateHeadCells(sampleRows, translations);
-          setHeadCells(dynamicHeadCells);
-          setCustomColumns(dynamicHeadCells.map(cell => cell.id));
-          
-          if (dynamicHeadCells.length > 0) {
-            setOrderBy(dynamicHeadCells[0].id);
-          }
+          // Set empty headCells when no data
+          setHeadCells([]);
+          setCustomColumns([]);
         } else {
           // Process the data passed from props
           const title = 'Visualization Data';
@@ -462,6 +547,37 @@ const [customColumns, setCustomColumns] = useState([]);
           if (dynamicHeadCells.length > 0) {
             setOrderBy(dynamicHeadCells[0].id);
           }
+          
+          // Extract filter options from visualization data if they exist
+          if (data && data.length > 0) {
+            // Find all tag properties in the first data item
+            const firstItem = data[0];
+            const tagKeys = Object.keys(firstItem?.tags || {});
+            
+            // Create dynamic filters for each tag type
+            const dynamicFilters = {};
+            
+            tagKeys.forEach(tagKey => {
+              // For each tag type, collect all unique values across all data items
+              const uniqueValues = [...new Set(
+                data
+                  .map(item => {
+                    const tagValue = item.tags?.[tagKey];
+                    // Handle both array and string values
+                    return Array.isArray(tagValue) ? tagValue : (tagValue ? [tagValue] : []);
+                  })
+                  .flat()
+                  .filter(Boolean)
+              )];
+              
+              // Only add to filters if values exist
+              if (uniqueValues.length > 0) {
+                dynamicFilters[tagKey] = uniqueValues;
+              }
+            });
+            
+            setFilterOptions(dynamicFilters);
+          }
         }
         
         setLoading(false);
@@ -475,15 +591,40 @@ const [customColumns, setCustomColumns] = useState([]);
     processData();
   }, [location.state?.visualizationData, translations]);
   useEffect(() => {
-    // Option 1: Load from localStorage
-    const savedQueries = localStorage.getItem('queryHistory');
-    if (savedQueries) {
-      setQueryHistory(JSON.parse(savedQueries));
-    }
+    const fetchQueryHistoryFromBackend = async () => {
+      try {
+        // Get the database ID from wherever it's available in your component
+        const databaseId = localStorage.getItem('dbId')
+        
+        if (!databaseId) {
+          console.warn("No database ID available, cannot fetch query history");
+          return;
+        }
+        
+        const response = await fetch(`http://localhost:8000/api/databases/${databaseId}/history`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch query history: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setQueryHistory(data);
+        
+        // Optionally save to localStorage for offline access
+        localStorage.setItem('queryHistory', JSON.stringify(data));
+      } catch (error) {
+        console.error("Error fetching query history:", error);
+        
+        // Fallback to localStorage if API fails
+        const savedQueries = localStorage.getItem('queryHistory');
+        if (savedQueries) {
+          setQueryHistory(JSON.parse(savedQueries));
+        }
+      }
+    };
     
-    // Option 2: Load from an API
-    // fetchQueryHistory().then(data => setQueryHistory(data));
-  }, []);
+    fetchQueryHistoryFromBackend();
+  }); 
   // Listen for theme changes
   useEffect(() => {
     const handleThemeChange = (event) => {
@@ -918,6 +1059,11 @@ const handleRefinementSubmit = async () => {
     setLoading(false);
   }
 };
+
+const navigateToGraphView = () => {
+  navigate("/rendergraph", { state: { visualizationData: data } });
+};
+
   const isSelected = (id) => selected.indexOf(id) !== -1;
 
   // Avoid a layout jump when reaching the last page with empty rows
@@ -1086,18 +1232,53 @@ const handleRefinementSubmit = async () => {
             
             {/* Query History */}
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Recent Queries</Typography>
-            <List dense sx={{ mb: 2, maxHeight: 150, overflow: 'auto' }}>
-              {queryHistory.map((query, index) => (
-                <ListItem key={index} disablePadding>
-                  <ListItemButton onClick={() => handleHistoryItemClick(query)}>
-                    <ListItemText 
-                      primary={query.slice(0, 30) + (query.length > 30 ? '...' : '')} 
-                      sx={{ color: darkMode ? '#FFFFFF' : 'inherit' }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
+            <Box>
+  <List dense sx={{ mb: 2, maxHeight: 150, overflow: 'auto' }}>
+    {queryHistory.map((query, index) => (
+      <ListItem 
+        key={index} 
+        disablePadding
+        secondaryAction={
+          <Tooltip title="Schedule Email">
+            <IconButton 
+              edge="end" 
+              size="small"
+              onClick={(e) => handleScheduleClick(query, e)}
+            >
+              <ScheduleIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        }
+      >
+        <ListItemButton onClick={() => handleHistoryItemClick(query)}>
+          <ListItemText 
+            primary={query.slice(0, 30) + (query.length > 30 ? '...' : '')} 
+            sx={{ color: darkMode ? '#FFFFFF' : 'inherit' }}
+          />
+        </ListItemButton>
+      </ListItem>
+    ))}
+  </List>
+  
+  <ScheduleEmailModal 
+    open={modalOpen}
+    onClose={() => setModalOpen(false)}
+    query={selectedQuery || ''}
+  />
+  
+  {queryHistory.length > 0 && (
+    <Button
+      variant="outlined"
+      color="error"
+      size="small"
+      startIcon={<DeleteIcon />}
+      onClick={handleClearHistory}
+      sx={{ mt: 1 }}
+    >
+      Clear History
+    </Button>
+  )}
+</Box>
           </Box>
         </Drawer>
         
@@ -1118,33 +1299,58 @@ const handleRefinementSubmit = async () => {
             transition: 'background-color 0.3s ease-in-out, color 0.3s ease-in-out', 
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <EnhancedTableToolbar 
-              numSelected={selected.length} 
-              title={translations?.title || tableTitle}
-              onSearch={handleSearch}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              darkMode={darkMode}
-              translations={translations}
-              onFilter={handleFilter}
-              filterOptions={filterOptions}
-            />
-            <IconButton 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              sx={{ 
-                mr: 2, 
-                color: darkMode ? 'white' : 'inherit',
-                bgcolor: darkMode ? 'action.selected' : 'action.hover',
-                '&:hover': {
-                  bgcolor: darkMode ? 'action.focus' : 'action.selected',
-                }
-              }}
-              aria-label="open customization panel"
-            >
-              <TuneIcon />
-            </IconButton>
-          </Box>
+<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <EnhancedTableToolbar 
+    numSelected={selected.length} 
+    title={translations?.title || tableTitle}
+    onSearch={handleSearch}
+    searchQuery={searchQuery}
+    setSearchQuery={setSearchQuery}
+    darkMode={darkMode}
+    translations={translations}
+    onFilter={handleFilter}
+    filterOptions={filterOptions}
+  />
+  
+  {/* Navigation to Graphs Button with persistent text next to icon */}
+  <ButtonBase
+    onClick={() => navigate("/rendergraph", { state: { visualizationData: data } })}
+    sx={{ 
+      display: 'flex',
+      alignItems: 'center',
+      mx: 1,
+      p: 1,
+      borderRadius: 1,
+      color: darkMode ? '#90caf9' : 'primary.main',
+      '&:hover': {
+        bgcolor: darkMode ? 'rgba(144, 202, 249, 0.08)' : 'rgba(25, 118, 210, 0.04)'
+      }
+    }}
+  >
+    <BarChartIcon sx={{ color: darkMode ? 'white' : 'rgba(0, 0, 0, 0.54)', mr: 1 }} />
+    <Typography 
+      variant="body2" 
+      sx={{ color: darkMode ? 'white' : 'rgba(0, 0, 0, 0.87)' }}
+    >
+      {translations?.viewGraphs || "View Graphs"}
+    </Typography>
+  </ButtonBase>
+  
+  <IconButton 
+    onClick={() => setSidebarOpen(!sidebarOpen)}
+    sx={{ 
+      mr: 2, 
+      color: darkMode ? 'white' : 'inherit',
+      bgcolor: darkMode ? 'action.selected' : 'action.hover',
+      '&:hover': {
+        bgcolor: darkMode ? 'action.focus' : 'action.selected',
+      }
+    }}
+    aria-label="open customization panel"
+  >
+    <TuneIcon />
+  </IconButton>
+</Box>
           
           
           <TableContainer sx={{ flexGrow: 1 }}>
@@ -1310,7 +1516,7 @@ const handleRefinementSubmit = async () => {
     sx={{ color: darkMode ? 'white' : 'black' }}
   />
 
-  {/* Not What You Expected Button */}
+<Box sx={{ display: 'flex', gap: 2 }}>
   <Button
     variant="outlined"
     color="warning"
@@ -1320,6 +1526,29 @@ const handleRefinementSubmit = async () => {
   >
     Not What You Expected?
   </Button>
+
+  <Button
+    variant="outlined"
+    color="warning"
+    size="small"
+    onClick={handleDownloadCSV}
+    startIcon={<DownloadIcon />}
+    disabled={filteredRows.length === 0}
+  >
+    Download CSV
+  </Button>
+  
+  <Button
+    variant="outlined"
+    color="warning"
+    size="small"
+    onClick={() => setEmailModalOpen(true)}
+    startIcon={<EmailIcon />}
+    disabled={filteredRows.length === 0}
+  >
+    Email Data
+  </Button>
+</Box>
 </Box>
 
         </Paper>
@@ -1399,6 +1628,14 @@ const handleRefinementSubmit = async () => {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Email Data Modal */}
+<EmailDataModal
+  open={emailModalOpen}
+  onClose={() => setEmailModalOpen(false)}
+  data={filteredRows}
+  tableTitle={tableTitle}
+  darkMode={darkMode}
+/>
     </Box>
   );
 }
