@@ -110,7 +110,7 @@ function VisualizationChoicePage() {
   return (
     <div className={`min-h-screen w-screen flex flex-col ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}
          style={{
-           backgroundImage: `url('/choice-bg.png')`,
+           backgroundImage: url('/choice-bg.png'),
            backgroundSize: 'cover',
            backgroundPosition: 'center',
            backgroundRepeat: 'no-repeat'
@@ -133,61 +133,6 @@ function VisualizationChoicePage() {
           {/* Table Visualization Card */}
           {/* Table Visualization Card */}
           <div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg p-6 flex flex-col hover:shadow-xl transition-all">
-<<<<<<< HEAD
-            <h2 className="text-2xl font-bold mb-3">{translations.tableCard}</h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.tableDescription}</p>
-            
-            <div className="flex-grow flex items-center justify-center mb-6">
-              <LinkPreview 
-                url="/table-visualization"
-                isStatic={true}
-                imageSrc="/table-preview.jpg" 
-                width={280}
-                height={180}
-                className="text-center text-blue-600 dark:text-blue-400"
-              >
-                <div className="text-blue-600 dark:text-blue-400 flex flex-col items-center">
-                  
-                  <span className="mt-2">{translations.tablePreview}</span>
-                </div>
-              </LinkPreview>
-            </div>
-            
-            <button 
-      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
-      onClick={() => navigate("/table")}
-    >
-      {translations.chooseButton}
-    </button>
-          </div>
-          
-          {/* Graph Visualization Card */}
-          <div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 rounded-xl shadow-lg p-6 flex flex-col hover:shadow-xl transition-all">
-            <h2 className="text-2xl font-bold mb-3">{translations.graphCard}</h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.graphDescription}</p>
-            
-            <div className="flex-grow flex items-center justify-center mb-6">
-              <LinkPreview 
-                url="/graph-visualization"
-                isStatic={true}
-                imageSrc="/graph-preview.jpg" // Placeholder - replace with actual preview image
-                width={280}
-                height={180}
-                className="text-center text-blue-600 dark:text-blue-400"
-              >
-                <div className="text-blue-600 dark:text-blue-400 flex flex-col items-center">
-                  
-                  <span className="mt-2">{translations.graphPreview}</span>
-                </div>
-              </LinkPreview>
-            </div>
-            
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
-            onClick={()=> navigate("/selectgraph")}>
-              {translations.chooseButton}
-            </button>
-          </div>
-=======
   <h2 className="text-2xl font-bold mb-3">{translations.tableCard}</h2>
   <p className="text-gray-700 dark:text-gray-300 mb-6">{translations.tableDescription}</p>
   
@@ -225,7 +170,6 @@ function VisualizationChoicePage() {
     {loading ? 'Loading...' : translations.chooseButton}
   </button>
 </div>
->>>>>>> 6eda6e3ae9aa071986df57b8ac7ee593ed42a2df
         </div>
       </main>
       
