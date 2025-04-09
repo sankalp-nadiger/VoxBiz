@@ -614,7 +614,6 @@ const [customColumns, setCustomColumns] = useState([]);
         }
         
         const data = await response.json();
-        console.log("Query history fetched successfully:", data);
         setQueryHistory(data.data);
         
         // Optionally save to localStorage for offline access
@@ -1457,7 +1456,9 @@ const navigateToGraphView = () => {
                 fontWeight: idx === 0 ? 500 : 400,
               }}
             >
-              {row[headCell.id]}
+              {typeof row[headCell.id] === 'boolean' 
+                ? row[headCell.id] ? 'True' : 'False' 
+                : row[headCell.id]}
             </TableCell>
           ))}
         </TableRow>

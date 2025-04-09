@@ -36,7 +36,8 @@ const Graphrender = () => {
   const [darkMode, setDarkMode] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [historyData, setHistoryData] = useState(initialHistoryData);
+  const [historyData, setHistoryData] = useState([]);
+
   const [chartData, setChartData] = useState([]);
   const [historyFilter, setHistoryFilter] = useState("all");
   const [showCustomizePanel, setShowCustomizePanel] = useState(false);
@@ -74,12 +75,12 @@ const Graphrender = () => {
       } 
       // If not, try to get from session storage
       else {
-        const storedData = sessionStorage.getItem('chartData');
+        const storedData = sessionStorage.getItem('visualizationData');
         if (storedData) {
           data = JSON.parse(storedData);
           console.log("Data loaded from session storage:", data);
           
-         
+        
         } else {
           console.warn("No visualization data found in location state or session storage");
           setError(prev => ({ ...prev, chart: "No data available for visualization" }));
@@ -110,23 +111,60 @@ const Graphrender = () => {
   };
 
   // Fetch query history from backend
-  const fetchQueryHistory = async () => {
-    try {
-      setLoading(prev => ({ ...prev, history: true }));
-      setError(prev => ({ ...prev, history: null }));
-      const databaseId = location.state?.databaseId || localStorage.getItem('dbId');
-      const response = await axios.get(`${API_BASE_URL}/api/databases/${databaseId}/history`, {
-        withCredentials: true, // correct key for including cookies/auth
-      });
+ // Simplified fetchQueryHistory function
+const fetchQueryHistory = async () => {
+  try {
+    setLoading(prev => ({ ...prev, history: true }));
+    setError(prev => ({ ...prev, history: null }));
+    
+    const storageKey = 'queryHistory';
+    
+    // First check if data exists in session storage
+    const storedHistoryData = sessionStorage.getItem(storageKey);
+    
+    if (storedHistoryData) {
+      // Use data from session storage if available
+      const parsedData = JSON.parse(storedHistoryData);
+      console.log('Query history loaded from session storage');
+      setHistoryData(parsedData); 
+    } else {
+      // If no data in storage, set empty array or fetch from your API endpoint
+      // If using API:
+      // const response = await axios.get(`${API_BASE_URL}/history`);
+      // setHistoryData(response.data);
+      // sessionStorage.setItem(storageKey, JSON.stringify(response.data));
       
-      setHistoryData(response.data);
-    } catch (err) {
-      console.error("Error fetching query history:", err);
-      setError(prev => ({ ...prev, history: "Failed to load query history" }));
-    } finally {
-      setLoading(prev => ({ ...prev, history: false }));
+      setHistoryData([]); // Default to empty if no data
     }
-  };
+  } catch (err) {
+    console.error("Error fetching query history:", err);
+    setError(prev => ({ ...prev, history: "Failed to load query history" }));
+  } finally {
+    setLoading(prev => ({ ...prev, history: false }));
+  }
+};
+
+// Simplified clearQueryHistory function
+const clearQueryHistory = async () => {
+  try {
+    setLoading(prev => ({ ...prev, history: true }));
+    
+    const storageKey = 'queryHistory';
+    
+    // Clear from session storage
+    sessionStorage.removeItem(storageKey);
+    
+    // Reset the history data in state
+    setHistoryData([]);
+    
+    console.log('Query history has been cleared');
+  } catch (err) {
+    console.error("Error clearing query history:", err);
+    setError(prev => ({ ...prev, history: "Failed to clear query history" }));
+  } finally {
+    setLoading(prev => ({ ...prev, history: false }));
+  }
+};
 
   // Fetch data on component mount
   useEffect(() => {
@@ -236,7 +274,7 @@ const Graphrender = () => {
             >
               Dashboard
             </button>
-            <button 
+            {/* <button 
               className={`py-2 px-4 font-medium transition-colors ${
                 activeTab === "history" 
                   ? `border-b-2 border-${darkMode ? 'blue-400' : 'blue-600'} text-${darkMode ? 'blue-400' : 'blue-600'}`
@@ -245,7 +283,7 @@ const Graphrender = () => {
               onClick={() => setActiveTab("history")}
             >
               Query History
-            </button>
+            </button> */}
             <button 
               className={`ml-282 py-2 px-4 font-medium transition-colors ${
                 activeTab === "" 
@@ -329,7 +367,7 @@ const Graphrender = () => {
               </div>
             </div>
             
-            <div className="mb-6">
+            {/* <div className="mb-6">
               <h3 className="font-semibold mb-2">Date Range</h3>
               <div className="space-y-2">
                 <div>
@@ -355,7 +393,7 @@ const Graphrender = () => {
                   />
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
           
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -449,99 +487,78 @@ const Graphrender = () => {
         </>
       )}
       
-      {/* History Tab */}
-      {activeTab === "history" && !isFullScreen && (
-        <div className={`rounded-lg shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6`}>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Query History</h2>
-            
-          </div>
+     
 
-          {loading.history ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <svg className="animate-spin h-12 w-12 mx-auto text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="mt-4">loading query history...</p>
-              </div>
-            </div>
-          ) : error.history ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center p-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <p className="mt-2">{error.history}</p>
-                <button 
-                  onClick={fetchQueryHistory}
-                  className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Performance Chart */}
-              <div className={`mb-8 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                <h3 className={`text-lg font-semibold mb-3 text-${darkMode ? 'gray-200' : 'gray-700'}`}>Query Performance</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={historyChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"} />
-                      <XAxis dataKey="date" stroke={darkMode ? "#fff" : "#333"} tick={{ fill: darkMode ? "#fff" : "#333" }} />
-                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" tick={{ fill: darkMode ? "#fff" : "#333" }} />
-                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" tick={{ fill: darkMode ? "#fff" : "#333" }} />
-                      <Tooltip content={<CustomTooltip darkMode={darkMode} />} />
-                      <Legend wrapperStyle={{ color: darkMode ? "#fff" : "#333" }} />
-                      <Line yAxisId="left" type="monotone" dataKey="avgExecutionTime" name="Avg. Execution Time (ms)" stroke="#8884d8" activeDot={{ r: 8 }} />
-                      <Line yAxisId="right" type="monotone" dataKey="queryCount" name="Query Count" stroke="#82ca9d" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+{/* History Tab */}
+{/* {activeTab === "history" && !isFullScreen && (
+  <div className={`rounded-lg shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6`}>
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-xl font-bold">Query History</h2>
+      <button 
+        onClick={() => clearQueryHistory()}
+        className={`px-4 py-2 ${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white rounded-md flex items-center`}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Clear History
+      </button>
+    </div>
 
-              {/* History List */}
-              <div>
-                {Object.entries(groupedByDay).map(([date, queries]) => {
-                  const dayQueries = historyFilter === "all" ? queries : queries.filter(q => q.userName === historyFilter);
-                  if (dayQueries.length === 0) return null;
-                  
-                  return (
-                    <div key={date} className="mb-6">
-                      <h3 className={`text-lg font-semibold mb-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-2 rounded`}>{date}</h3>
-                      <div className="space-y-4">
-                        {dayQueries.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map(query => (
-                          <div key={query.id} className={`border-l-4 border-blue-500 pl-4 py-2 ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
-                            <div className="flex justify-between items-center mb-1">
-                              <div className="flex items-center">
-                                <span className={`font-semibold text-${darkMode ? 'gray-200' : 'gray-800'}`}>
-                                  {new Date(query.timestamp).toLocaleTimeString()}
-                                </span>
-                                <span className={`ml-4 ${darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'} py-1 px-2 rounded text-sm`}>
-                                  {query.userName}
-                                </span>
-                              </div>
-                              <span className={`text-${darkMode ? 'gray-300' : 'gray-600'}`}>
-                                Execution Time: <span className="font-medium">{query.executionTime} ms</span>
-                              </span>
-                            </div>
-                            <pre className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} p-3 rounded text-sm overflow-x-auto`}>
-                              {query.query}
-                            </pre>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+    {loading.history ? (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <svg className="animate-spin h-12 w-12 mx-auto text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="mt-4">Loading query history...</p>
         </div>
-      )}
+      </div>
+    ) : error.history ? (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center p-4">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <p className="mt-2">{error.history}</p>
+          <button 
+            onClick={fetchQueryHistory}
+            className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div>
+        {historyData.length === 0 ? (
+          <div className="text-center py-16">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="mt-4 text-gray-500">No query history available</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {historyData.map((query, index) => (
+              <div key={index} className={`border-l-4 border-blue-500 pl-4 py-2 ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className={`font-semibold text-${darkMode ? 'gray-200' : 'gray-800'}`}>
+                    {new Date(query.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                <pre className={`${darkMode ? 'bg-gray-800' : 'bg-gray-100'} p-3 rounded text-sm overflow-x-auto`}>
+                  {query.query}
+                </pre>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+)} */}
     </div>
   );
 };

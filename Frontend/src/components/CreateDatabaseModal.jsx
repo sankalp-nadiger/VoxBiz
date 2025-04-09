@@ -11,8 +11,7 @@ const CreateDatabaseModal = ({ darkMode, onClose }) => {
   const [formData, setFormData] = useState({
     dbName: "",
     connectionString: "",
-    username: "",
-    password: "",
+
   });
   const [schema, setSchema] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -124,7 +123,7 @@ const CreateDatabaseModal = ({ darkMode, onClose }) => {
           formPayload.append("textInstructions", textInput);
         }
         
-        response = await axios.post("http://localhost:8000/api/database/excel", formPayload);
+        response = await axios.post("http://localhost:3000/api/database/excel", formPayload);
       }
       
       if (response.data && response.data.schema) {
@@ -142,7 +141,7 @@ const CreateDatabaseModal = ({ darkMode, onClose }) => {
     setStep("loading");
     
     try {
-      await axios.post("http://localhost:8000/api/database/confirm");
+      await axios.post("http://localhost:3000/api/database/confirm");
       setStep("success");
     } catch (error) {
       console.error("Error confirming schema:", error);
@@ -323,7 +322,7 @@ const CreateDatabaseModal = ({ darkMode, onClose }) => {
                       className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
                     />
                   </div>
-                  <div>
+                  {/* <div>
                     <label className="block text-sm font-medium mb-1">Username</label>
                     <input
                       type="text"
@@ -344,7 +343,7 @@ const CreateDatabaseModal = ({ darkMode, onClose }) => {
                       required
                       className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
                     />
-                  </div>
+                  </div> */}
                 </>
               )}
             </div>

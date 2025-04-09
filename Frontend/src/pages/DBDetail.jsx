@@ -168,7 +168,7 @@ const DatabaseDetailsPage = ( )=> {
     window.location.href = `/rulemanage`;
   };
 
- const handleDatabaseQuery = (query) => {
+  const handleDatabaseQuery = (query) => {
     setProcessingVoice(true);
     const dbId = localStorage.getItem('dbId');
     if (!dbId) {
@@ -202,9 +202,20 @@ const DatabaseDetailsPage = ( )=> {
       .then(response => {
         console.log("Database query successful:", response.data);
         setProcessingVoice(false);
+        
+        // Save the data to sessionStorage
+        try {
+          sessionStorage.setItem('visualizationData', JSON.stringify(response.data));
+          console.log("Data saved to sessionStorage successfully");
+        } catch (err) {
+          console.error("Error saving to sessionStorage:", err);
+          // If sessionStorage fails (e.g., quota exceeded), continue with navigation anyway
+        }
+        
         // On success, navigate to the choice page
-        navigate('/visChoice', { state: { queryResponse: response.data } });
+        navigate('/table', { state: { visualizationData: response.data } });
       })
+      
       .catch(error => {
         console.error("Error processing database query:", error);
         setProcessingVoice(false);

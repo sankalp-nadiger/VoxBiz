@@ -4,6 +4,7 @@ import CreateDatabaseModal from "../components/CreateDatabaseModal";
 import ConnectDatabaseModal from "../components/ConnectDatabaseModal";
 import { useNavigate } from 'react-router-dom';
 import VoiceSearchModal from '../components/VoiceSearchModal';
+import Loader from '../components/ui/Loader';
 // import DbPreviewOption from '../components/ui/db-preview';
 
 const DatabaseDashboard = () => {
@@ -189,7 +190,7 @@ setDatabases(data);
 
   const handleDbVoiceQuery = (dbId, query) => {
     setProcessingVoice(true);
-
+  
     if (!dbId) {
       setProcessingVoice(false);
       setErrorMessage('Database ID not found. Please try again.');
@@ -220,8 +221,19 @@ setDatabases(data);
       .then(response => {
         console.log("Database query successful:", response.data);
         setProcessingVoice(false);
+        
+        // Save the data to sessionStorage
+        try {
+          sessionStorage.setItem('visualizationData', JSON.stringify(response.data));
+          console.log(sessionStorage.getItem('visualizationData'))
+          console.log("Data saved to sessionStorage successfully");
+        } catch (err) {
+          console.error("Error saving to sessionStorage:", err);
+          // If storage fails, continue with navigation anyway
+        }
+        
         // On success, navigate to the choice page
-        navigate('/visChoice', { state: { queryResponse: response.data } });
+        navigate('/table', { state: { visualizationData: response.data } });
       })
       .catch(error => {
         console.error("Error processing database query:", error);
@@ -840,7 +852,12 @@ setDatabases(data);
           </div>
         </div>
       </div>
-  
+      {processingVoice && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <Loader />
+  </div>
+)}
+
       {showCreateModal && (
         <CreateDatabaseModal 
           darkMode={darkMode}
