@@ -32,11 +32,55 @@ const EmailDataModal = ({ open, onClose, data, tableTitle, darkMode }) => {
     severity: 'success'
   });
 
+  // const handleSendEmail = async () => {
+  //   try {
+  //     setLoading(true);
+      
+  //     const response = await fetch('http://localhost:3000/api/send-data-email', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         recipientEmail: email,
+  //         subject,
+  //         message,
+  //         data,
+  //         tableTitle,
+  //         sendCopy
+  //       }),
+  //     });
+      
+  //     const result = await response.json();
+      
+  //     if (response.ok) {
+  //       setNotification({
+  //         open: true,
+  //         message: 'Email sent successfully!',
+  //         severity: 'success'
+  //       });
+  //       setTimeout(() => {
+  //         onClose();
+  //       }, 1500);
+  //     } else {
+  //       throw new Error(result.message || 'Failed to send email');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error sending email:', error);
+  //     setNotification({
+  //       open: true,
+  //       message: `Failed to send email: ${error.message}`,
+  //       severity: 'error'
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
   const handleSendEmail = async () => {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/send-data-email', {
+      const response = await fetch('http://localhost:3000/api/send-data-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,20 +95,39 @@ const EmailDataModal = ({ open, onClose, data, tableTitle, darkMode }) => {
         }),
       });
       
+      // Check if response is ok before trying to parse JSON
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('API endpoint not found. Please ensure the backend service is running.');
+        }
+        
+        // Try to parse error as JSON, but handle case where it's not JSON
+        const errorText = await response.text();
+        let errorMessage;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || `Server error: ${response.status}`;
+        } catch (parseError) {
+          // If parsing fails, use status text or a generic message
+          errorMessage = `Server error: ${response.status} ${response.statusText || ''}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      // Only try to parse as JSON if response was ok
       const result = await response.json();
       
-      if (response.ok) {
-        setNotification({
-          open: true,
-          message: 'Email sent successfully!',
-          severity: 'success'
-        });
-        setTimeout(() => {
-          onClose();
-        }, 1500);
-      } else {
-        throw new Error(result.message || 'Failed to send email');
-      }
+      setNotification({
+        open: true,
+        message: 'Email sent successfully!',
+        severity: 'success'
+      });
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+      
     } catch (error) {
       console.error('Error sending email:', error);
       setNotification({
@@ -76,7 +139,6 @@ const EmailDataModal = ({ open, onClose, data, tableTitle, darkMode }) => {
       setLoading(false);
     }
   };
-
   const handleDownload = () => {
     // Create CSV from data
     const headers = Object.keys(data[0] || {}).join(',');

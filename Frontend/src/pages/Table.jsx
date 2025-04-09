@@ -404,7 +404,7 @@ const [customColumns, setCustomColumns] = useState([]);
   const handleClearHistory = async () => {
     try {
       // Get the database ID from wherever it's available
-      const databaseId = location.state?.databaseId || localStorage.getItem('currentDatabaseId');
+      const databaseId = location.state?.databaseId || localStorage.getItem('dbId');
       
       if (!databaseId) {
         console.error("No database ID available");
@@ -417,7 +417,7 @@ const [customColumns, setCustomColumns] = useState([]);
       }
       
       // Call the backend API to delete history
-      const response = await fetch(`http://localhost:8000/api/databases/${databaseId}/history`, {
+      const response = await fetch(`http://localhost:3000/api/databases/${databaseId}/history`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -579,7 +579,7 @@ const [customColumns, setCustomColumns] = useState([]);
             setFilterOptions(dynamicFilters);
           }
         }
-        
+        console.log("Navigating with data:", data);
         setLoading(false);
       } catch (err) {
         setError('Failed to process data');
@@ -601,17 +601,24 @@ const [customColumns, setCustomColumns] = useState([]);
           return;
         }
         
-        const response = await fetch(`http://localhost:8000/api/databases/${databaseId}/history`);
+        const response = await fetch(`http://localhost:3000/api/databases/${databaseId}/history`, {
+          method: 'GET',
+          credentials: 'include', // Include cookies for authentication
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         
         if (!response.ok) {
           throw new Error(`Failed to fetch query history: ${response.status}`);
         }
         
         const data = await response.json();
-        setQueryHistory(data);
+        console.log("Query history fetched successfully:", data);
+        setQueryHistory(data.data);
         
         // Optionally save to localStorage for offline access
-        localStorage.setItem('queryHistory', JSON.stringify(data));
+        localStorage.setItem('queryHistory', JSON.stringify(data.data));
       } catch (error) {
         console.error("Error fetching query history:", error);
         
@@ -884,7 +891,7 @@ const processVoiceCommand = async () => {
   setLoading(true);
   
   try {
-    const response = await fetch(`http://localhost:8000/api/query/refine`, {
+    const response = await fetch(`http://localhost:3000/api/query/refine`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -942,7 +949,7 @@ const handleCustomQuerySubmit = async () => {
   setLoading(true);
   
   try {
-    const response = await fetch(`http://localhost:8000/api/query/custom`, {
+    const response = await fetch(`http://localhost:3000/api/query/custom`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1011,7 +1018,7 @@ const handleRefinementSubmit = async () => {
   setNotExpectedDialogOpen(false);
   
   try {
-    const response = await fetch(`http://localhost:8000/api/query/refine`, {
+    const response = await fetch(`http://localhost:3000/api/query/refine`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1233,32 +1240,36 @@ const navigateToGraphView = () => {
             {/* Query History */}
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Recent Queries</Typography>
             <Box>
-  <List dense sx={{ mb: 2, maxHeight: 150, overflow: 'auto' }}>
-    {queryHistory.map((query, index) => (
-      <ListItem 
-        key={index} 
-        disablePadding
-        secondaryAction={
-          <Tooltip title="Schedule Email">
-            <IconButton 
-              edge="end" 
-              size="small"
-              onClick={(e) => handleScheduleClick(query, e)}
-            >
-              <ScheduleIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        }
-      >
-        <ListItemButton onClick={() => handleHistoryItemClick(query)}>
-          <ListItemText 
-            primary={query.slice(0, 30) + (query.length > 30 ? '...' : '')} 
-            sx={{ color: darkMode ? '#FFFFFF' : 'inherit' }}
-          />
-        </ListItemButton>
-      </ListItem>
-    ))}
-  </List>
+            <List dense sx={{ mb: 2, maxHeight: 150, overflow: 'auto' }}>
+  {(Array.isArray(queryHistory) ? queryHistory : []).map((query, index) => (
+    <ListItem 
+      key={index} 
+      disablePadding
+      secondaryAction={
+        <Tooltip title="Schedule Email">
+          <IconButton 
+            edge="end" 
+            size="small"
+            onClick={(e) => handleScheduleClick(query, e)}
+          >
+            <ScheduleIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      }
+    >
+      <ListItemButton onClick={() => handleHistoryItemClick(query)}>
+  <ListItemText 
+    primary={
+      typeof query.query === 'string'
+        ? query.query.slice(0, 30) + (query.query.length > 30 ? '...' : '')
+        : ''
+    }
+    sx={{ color: darkMode ? '#FFFFFF' : 'inherit' }}
+  />
+</ListItemButton>
+    </ListItem>
+  ))}
+</List>
   
   <ScheduleEmailModal 
     open={modalOpen}

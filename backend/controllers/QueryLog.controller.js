@@ -1,5 +1,7 @@
 // controllers/QueryLog.controller.js
 import QueryLog from '../models/QueryLog.model.js';
+import Database from '../models/Database.model.js';
+import { Sequelize } from 'sequelize';
 
 // Log a query execution
 export const logQuery = async (databaseId, query, success, responseTime) => {

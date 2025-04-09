@@ -24,16 +24,14 @@ const COLOR_PALETTES = [
 ];
 
 // API base URL - make sure this is defined
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3s000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const Graphrender = () => {
   const location = useLocation();
   
   // Initialize graphType from location state if available
   const [graphType, setGraphType] = useState(
-    location.state?.selectedGraphType 
-      ? location.state.selectedGraphType.charAt(0).toLowerCase() + location.state.selectedGraphType.slice(1)
-      : "line"
+    "bar"
   );
   const [darkMode, setDarkMode] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -81,11 +79,7 @@ const Graphrender = () => {
           data = JSON.parse(storedData);
           console.log("Data loaded from session storage:", data);
           
-          // Also get the graph type if available
-          const storedGraphType = sessionStorage.getItem('graphType');
-          if (storedGraphType) {
-            setGraphType(storedGraphType);
-          }
+         
         } else {
           console.warn("No visualization data found in location state or session storage");
           setError(prev => ({ ...prev, chart: "No data available for visualization" }));
@@ -120,11 +114,9 @@ const Graphrender = () => {
     try {
       setLoading(prev => ({ ...prev, history: true }));
       setError(prev => ({ ...prev, history: null }));
-      
-      const response = await axios.get(`${API_BASE_URL}/query-history`, {
-        params: {
-          user: historyFilter === "all" ? null : historyFilter
-        }
+      const databaseId = location.state?.databaseId || localStorage.getItem('dbId');
+      const response = await axios.get(`${API_BASE_URL}/api/databases/${databaseId}/history`, {
+        withCredentials: true, // correct key for including cookies/auth
       });
       
       setHistoryData(response.data);
@@ -203,14 +195,16 @@ const Graphrender = () => {
       };
     }, []);
   // Group queries by day for history view
-  const groupedByDay = historyData.reduce((acc, item) => {
-    const date = new Date(item.timestamp).toLocaleDateString();
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(item);
-    return acc;
-  }, {});
+  const groupedByDay = Array.isArray(historyData)
+  ? historyData.reduce((acc, item) => {
+      const date = new Date(item.timestamp).toLocaleDateString();
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(item);
+      return acc;
+    }, {})
+  : {};
 
   // Prepare data for performance chart in history view
   const historyChartData = Object.entries(groupedByDay).map(([date, queries]) => {
@@ -222,9 +216,6 @@ const Graphrender = () => {
       queryCount: queryCount
     };
   });
-
-  // Get unique user names for filter
-  const userNames = [...new Set(historyData.map(item => item.userName))];
 
   return (
     <div className={`App p-6 min-h-screen w-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
@@ -463,21 +454,7 @@ const Graphrender = () => {
         <div className={`rounded-lg shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6`}>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold">Query History</h2>
-            <div className="flex items-center">
-              <span className={`mr-2 text-${darkMode ? 'gray-300' : 'gray-700'}`}>Filter by User:</span>
-              <select
-                value={historyFilter}
-                onChange={(e) => setHistoryFilter(e.target.value)}
-                className={`p-2 border rounded ${
-                  darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-800'
-                }`}
-              >
-                <option value="all">All Users</option>
-                {userNames.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </div>
+            
           </div>
 
           {loading.history ? (

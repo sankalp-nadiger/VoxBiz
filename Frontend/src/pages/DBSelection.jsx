@@ -3,6 +3,8 @@ import Navbar from '../components/Navbar';
 import CreateDatabaseModal from "../components/CreateDatabaseModal";
 import ConnectDatabaseModal from "../components/ConnectDatabaseModal";
 import { useNavigate } from 'react-router-dom';
+import VoiceSearchModal from '../components/VoiceSearchModal';
+// import DbPreviewOption from '../components/ui/db-preview';
 
 const DatabaseDashboard = () => {
  
@@ -10,10 +12,13 @@ const DatabaseDashboard = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [databases, setDatabases] = useState([]);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showVoiceModal1, setShowVoiceModal1] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [processingVoice, setProcessingVoice] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [translations, setTranslations] = useState({
     title: 'Your Databases',
     createButton: 'Create Database',
@@ -163,14 +168,14 @@ setDatabases(data);
     // Make sure we have databases loaded before opening the modal
     if (databases.length === 0 && !isLoading) {
       fetchDatabases().then(() => {
-        setShowVoiceModal(true);
+        setShowVoiceModal1(true);
       });
     } else {
-      setShowVoiceModal(true);
+      setShowVoiceModal1(true);
     }
   };
   const handleCloseVoiceModal = () => {
-    setShowVoiceModal(false);
+    setShowVoiceModal1(false);
   };
   // Add database refresh on modal close to update list when new database is added or connected
   const handleModalClose = () => {
@@ -182,7 +187,7 @@ setDatabases(data);
   };
 
 
-  const handleDbVoiceQuery = (dbId) => {
+  const handleDbVoiceQuery = (dbId, query) => {
     setProcessingVoice(true);
 
     if (!dbId) {
@@ -198,7 +203,7 @@ setDatabases(data);
       return;
     }
     // Make an API call to the backend database service
-    fetch('http://localhost:3000/api/query/process/${dbId}', {
+    fetch(`http://localhost:3000/api/query/process/${dbId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -253,10 +258,14 @@ setDatabases(data);
       console.error('Error navigating to database:', error);
     }
   };
-  
+  const [activeDbId, setActiveDbId] = useState(null);
+  const handleVoiceInput = (dbId) => {
+    setActiveDbId(dbId);
+    setShowVoiceModal(true);
+  };
   
   // Voice Search Modal Component
-  const VoiceSearchModal = ({ darkMode, onClose, onDatabaseFound, databases }) => {
+  const VoiceSearchModal1 = ({ darkMode, onClose, onDatabaseFound, databases }) => {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [message, setMessage] = useState('Click to start speaking');
@@ -753,29 +762,32 @@ setDatabases(data);
                       </td>
                       <td className="px-3 py-4 text-xs whitespace-nowrap">{new Date(db.lastAccessed).toLocaleDateString()}</td>
                       <td className="px-3 py-4 text-xs whitespace-nowrap">
-                        <DbPreviewOption 
+                        {/* <DbPreviewOption 
                           dbId={db.id} 
                           dbName={db.name} 
                           darkMode={darkMode} 
-                        />
+                        /> */}
                       </td>
                       <td className="px-3 py-4 text-xs whitespace-nowrap">
                         <div className="flex items-center space-x-2">
                           {/* Voice Query Button */}
                           <div className="relative group">
-                            <button
-                              onClick={() => handleDbVoiceQuery(db.id)}
-                              className={`p-1 rounded-full ${
-                                darkMode 
-                                  ? 'bg-purple-600 hover:bg-purple-700' 
-                                  : 'bg-purple-500 hover:bg-purple-600'
-                              } text-white`}
-                              title={translations.voiceQueryDb}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                              </svg>
-                            </button>
+                          
+<button
+  onClick={() => handleVoiceInput(db.id)}  // Now it creates a function that will be called on click
+  className={`p-1 rounded-full ${
+    darkMode 
+      ? 'bg-purple-600 hover:bg-purple-700' 
+      : 'bg-purple-500 hover:bg-purple-600'
+  } text-white`}
+  title={translations.voiceQueryDb}
+>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+  </svg>
+</button>
+    
+
                             
                             {/* Tooltip */}
                             <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
@@ -850,13 +862,23 @@ setDatabases(data);
       )}
   
       {/* Voice Search Modal */}
-      {showVoiceModal && (
+      {showVoiceModal1 && (
+  <VoiceSearchModal1
+    darkMode={darkMode}
+    onClose={handleCloseVoiceModal}
+    onDatabaseFound={handleDatabaseFound}
+    databases={databases}
+    translations={translations}
+  />
+)}
+{showVoiceModal && (
         <VoiceSearchModal
-          darkMode={darkMode}
-          onClose={handleCloseVoiceModal}
-          onDatabaseFound={handleDatabaseFound}
-          databases={databases}
-          translations={translations}
+          open={showVoiceModal}
+          onClose={() => setShowVoiceModal(false)}
+          onQuery={(transcript) => {
+            setShowVoiceModal(false);
+            handleDbVoiceQuery(activeDbId, transcript); // Now properly passes both parameters
+          }}
         />
       )}
       <footer className="mt-auto py-4 text-center backdrop-blur-sm bg-white/30 dark:bg-black/30">

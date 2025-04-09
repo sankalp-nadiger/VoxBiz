@@ -5,6 +5,10 @@ import authRoutes from "./routes/Auth.route.js";
 import databaseRoutes from "./routes/Database.route.js";
 import queryRoutes from "./routes/Query.route.js";
 import queryLogRoutes from './routes/QueryLog.route.js';
+import path from 'path';
+import os from 'os';
+import fs from 'fs/promises'; // already seems used, just confirming
+import nodemailer from 'nodemailer';
 
 
 import sequelize from "./config/Database.config.js";
@@ -20,7 +24,7 @@ import ChatBotRoutes from "./routes/ChatBot.route.js";
 dotenv.config();
 
 const app = express();
-const router = express.Router();
+// const router = express.Router();
 
 app.use(cors({
   origin: "http://localhost:5173", // ✅ Your frontend origin
@@ -37,7 +41,7 @@ app.use("/api/query", queryRoutes);
 app.use('/api', ChatBotRoutes);
 app.use('/api', queryLogRoutes);
 
-router.post('/send-data-email', async (req, res) => {
+app.post('/api/send-data-email', async (req, res) => {
   try {
     const { recipientEmail, subject, message, data, tableTitle, sendCopy } = req.body;
     

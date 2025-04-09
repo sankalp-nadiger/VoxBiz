@@ -1,12 +1,12 @@
 // routes/queryLog.routes.js
 import express from 'express';
 import { getQueryHistory, clearQueryHistory } from '../controllers/QueryLog.controller.js';
-// import { authenticateUser } from '../middleware/AuthUser.js'; // Adjust path as needed
+import  AuthUser from '../middleware/AuthUser.js'; // Adjust path as needed
 
 const router = express.Router();
 
 // // Apply authentication middleware to all routes
-// router.use(authenticateUser);
+router.use(AuthUser);
 
 // Get query history for a database
 router.get('/databases/:databaseId/history', getQueryHistory);
