@@ -82,6 +82,7 @@ const EmailDataModal = ({ open, onClose, data, tableTitle, darkMode }) => {
       
       const response = await fetch('http://localhost:3000/api/send-data-email', {
         method: 'POST',
+        credentials: 'include', // Include credentials for CORS
         headers: {
           'Content-Type': 'application/json',
         },

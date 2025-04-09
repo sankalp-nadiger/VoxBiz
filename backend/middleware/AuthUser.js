@@ -8,7 +8,7 @@ const AuthUser = (req, res, next) => {
     }
 
     const decoded = verifyToken(token); // make sure this returns decoded token!
-    console.log("👤 Decoded user:", decoded);
+    // console.log("👤 Decoded user:", decoded);
     if (!decoded) {
         return res.status(403).json({ message: "Forbidden: Invalid or expired token" });
     }

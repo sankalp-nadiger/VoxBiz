@@ -111,7 +111,7 @@ const VoiceSearchModal = ({ darkMode, onClose, onQuery }) => {
                 onClick={stopListening}
                 className={`px-4 py-2 self-center rounded-lg ${
                   darkMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'
-                } text-white`}
+                } text-black`}
               >
                 Done
               </button>

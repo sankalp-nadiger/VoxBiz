@@ -1,4 +1,3 @@
-import { logQuery } from './QueryLog.controller.js';
 import Database from "../models/Database.model.js";
 import { executeQuery } from "../services/DatabaseService.js";
 import axios from "axios";
@@ -9,7 +8,6 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Cache schemas for multiple databases (keyed by databaseId)
 const dbSchemaCache = {};
 
-// Add the missing getDatabaseSchema function
 async function getDatabaseSchema(databaseId) {
   if (dbSchemaCache[databaseId]) {
     console.log("📦 Using cached DB schema for:", databaseId);
@@ -64,50 +62,11 @@ async function getDatabaseSchema(databaseId) {
   }
 }
 
-// Helper function to call Gemini API
-async function callGeminiAPI(prompt) {
-  try {
-    const modelName = "gemini-1.5-flash";
-    const model = genAI.getGenerativeModel({ model: modelName });
-    
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
-      },
-    });
-    
-    return result.response.text();
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    throw new Error("Failed to generate mappings with Gemini API");
-  }
-}
-
-// Helper function to parse Gemini response
-function parseGeminiResponse(response) {
-  try {
-    // Find JSON content in the response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error("No valid JSON found in response");
-  } catch (error) {
-    console.error("Failed to parse Gemini response:", error);
-    return {};
-  }
-}
+const FASTAPI_BASE_URL = "http://127.0.0.1:8000";
 
 // ✅ Controller to process voice → SQL → DB
+// Node.js Controller - processQuery
 export const processQuery = async (req, res) => {
-  const startTime = Date.now();
-  let success = false;
-  let sqlQuery = null;
-  
   try {
     console.log("🔍 Processing NLP to SQL query...");
     const userId = req.user.id;
@@ -138,38 +97,38 @@ export const processQuery = async (req, res) => {
 
     // Step 3: Extract table relationships
     const tables = Object.keys(schema);
-    const relationships = {};
+const relationships = {};
 
-    // Improved relationship detection
-    for (const sourceTable of tables) {
-      // Get columns for this table
-      const columns = schema[sourceTable];
+// Improved relationship detection
+for (const sourceTable of tables) {
+  // Get columns for this table
+  const columns = schema[sourceTable];
+  
+  // Check each column for potential foreign key patterns
+  for (const column of columns) {
+    if (column.name.endsWith('_id')) { // Access the 'name' property
+      // Extract the referenced entity name from the column
+      const potentialEntity = column.name.replace('_id', '');
       
-      // Check each column for potential foreign key patterns
-      for (const column of columns) {
-        if (column.name.endsWith('_id')) { // Access the 'name' property
-          // Extract the referenced entity name from the column
-          const potentialEntity = column.name.replace('_id', '');
-          
-          // Check if this matches or is related to any table name
-          for (const targetTable of tables) {
-            const singularTarget = targetTable.endsWith('s') ? targetTable.slice(0, -1) : targetTable;
-            
-            if (potentialEntity === targetTable || potentialEntity === singularTarget) {
-              const relationKey = JSON.stringify([targetTable, sourceTable]);
-              if (!relationships[relationKey]) {
-                relationships[relationKey] = {
-                  [`${targetTable}.id`]: `${sourceTable}.${column.name}` // Use 'name' here as well
-                };
-                console.log(`Found relationship: ${targetTable}.id -> ${sourceTable}.${column.name}`);
-              }
-            }
+      // Check if this matches or is related to any table name
+      for (const targetTable of tables) {
+        const singularTarget = targetTable.endsWith('s') ? targetTable.slice(0, -1) : targetTable;
+        
+        if (potentialEntity === targetTable || potentialEntity === singularTarget) {
+          const relationKey = JSON.stringify([targetTable, sourceTable]);
+          if (!relationships[relationKey]) {
+            relationships[relationKey] = {
+              [`${targetTable}.id`]: `${sourceTable}.${column.name}` // Use 'name' here as well
+            };
+            console.log(`Found relationship: ${targetTable}.id -> ${sourceTable}.${column.name}`);
           }
         }
       }
     }
+  }
+}
 
-    console.log("🔹 Identified relationships:", relationships);
+console.log("🔹 Identified relationships:", relationships);
 
     // Step 4: Use Gemini to generate table and column aliases based on schema
     const tableAliasesPrompt = `
@@ -208,68 +167,84 @@ export const processQuery = async (req, res) => {
     console.log("🔹 Generated table aliases:", tableAliases);
     console.log("🔹 Generated column aliases:", columnAliases);
     console.log("🔹 Generated business metrics:", businessMetrics);
+    const fastApiResponse = await axios.post(`${FASTAPI_BASE_URL}/process-query`, {
+      query: transcript,
+      schema: Object.entries(schema).map(([table, columns]) => ({ [table]: columns })),
+      relationships: Object.entries(relationships).map(([key, value]) => ({
+        tables: JSON.parse(key),
+        joinCondition: value
+      })),
+      tableAliases,
+      columnAliases,
+      businessMetrics
+    });
 
-    
+    const { query: nlpquery, success, error } = fastApiResponse.data;
+console.log("🔷 FastAPI response:", fastApiResponse.data);
+
+    // Step 5: Generate SQL query using Gemini
     const queryGenerationPrompt = `
-      You are an expert SQL query generator. Generate a PostgreSQL query for the following natural language request.
+      Given the following database schema and the user's natural language query, generate an accurate SQL query.
       
-      Database schema:
-      ${JSON.stringify(schema, null, 2)}
+      Schema: ${JSON.stringify(schema)}
+      Query: "${transcript}"
       
-      Table relationships:
-      ${JSON.stringify(relationships, null, 2)}
-      
-      Business metrics that might be helpful:
-      ${JSON.stringify(businessMetrics, null, 2)}
-      
-      Natural language query: "${transcript}"
-     
-      
-      Rules:
-      1. Generate only the SQL query with no explanations or comments
-      2. Use proper JOINs when needed based on the relationships
-      3. If the query mentions orders with total amount > 150, make sure to use WHERE for filtering
-      4. Format the query properly with SELECT, FROM, JOIN, WHERE clauses
-      5. Use appropriate GROUP BY, ORDER BY, and LIMIT as needed
-      
-      Return only the SQL query.
+      Only return the SQL query as plain text, without explanations or formatting.
     `;
 
     const geminiQueryResponse = await callGeminiAPI(queryGenerationPrompt);
-    sqlQuery = geminiQueryResponse.replace(/```sql|```/g, '').trim();
-    console.log("🔹 SQL generated by NLP:", sqlQuery);
+    const sqlQuery = geminiQueryResponse.trim();
+    console.log("🔹 SQL generated by LLM:", sqlQuery);
 
-    // Step 6: Execute the query
     const result = await executeQuery(dbEntry, sqlQuery);
-    success = true;
-    
-    // Calculate response time
-    const responseTime = (Date.now() - startTime) / 1000; // Convert to seconds
-    
-    // Log the successful query
-    await logQuery(databaseId, sqlQuery, true, responseTime);
 
     return res.status(200).json({
       success: true,
       sql: sqlQuery,
-      data: result,
-      execution_time: responseTime
+      data: result
     });
 
   } catch (error) {
     console.error("❌ NLP to SQL processing error:", error.response?.data || error.message);
-    
-    // Calculate response time even for failed queries
-    const responseTime = (Date.now() - startTime) / 1000;
-    
-    // Log the failed query if we got far enough to generate one
-    if (sqlQuery) {
-      await logQuery(req.params.databaseId, sqlQuery, false, responseTime);
-    }
-    
-    return res.status(500).json({ 
-      error: "Failed to process the natural language query.",
-      details: error.message
-    });
+    return res.status(500).json({ error: "Failed to process the natural language query." });
   }
 };
+
+// Helper function to call Gemini API
+// Helper function to call Gemini API
+async function callGeminiAPI(prompt) {
+  try {
+    const modelName = "gemini-1.5-flash";
+    const model = genAI.getGenerativeModel({ model: modelName });
+    
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+      },
+    });
+    
+    return result.response.text();
+  } catch (error) {
+    console.error("Gemini API error:", error);
+    throw new Error("Failed to generate mappings with Gemini API");
+  }
+}
+
+// Helper function to parse Gemini response
+function parseGeminiResponse(response) {
+  try {
+    // Find JSON content in the response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error("No valid JSON found in response");
+  } catch (error) {
+    console.error("Failed to parse Gemini response:", error);
+    return {};
+  }
+}
