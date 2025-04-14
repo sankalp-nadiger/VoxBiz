@@ -7,7 +7,7 @@ import PreviewIcon from '@mui/icons-material/Preview';
 import AddIcon from '@mui/icons-material/Add';
 import LockIcon from '@mui/icons-material/Lock';
 
-const API_ENDPOINT = '/api/rules';
+const API_ENDPOINT = 'http://localhost:3000/api/rules';
 
 // Component for managing database query rules
 const DatabaseRulesManager = () => {

@@ -10,7 +10,7 @@ import VoxBizAnimation from "./pages/Animation";
 import {MainPage} from "./pages/MainPage";
 import DatabaseDashboard from "./pages/DBSelection";
 import DatabaseDetailsPage from "./pages/DBDetail";
-import VisualizationChoicePage from "./pages/VisChoice";
+// import VisualizationChoicePage from "./pages/VisChoice";
 import DataTable from "./pages/Table";
 import DatabaseRulesManager from "./pages/RuleManage";
 import ForgotPassword from "./components/ForgotPwd";
@@ -30,7 +30,7 @@ const App = () => {
         <Route path="/selectgraph" element={<Selectg/>}/>
         <Route path="/rendergraph" element={<GraphRender/>}/>
         <Route path="/dblist" element={<DatabaseDashboard/>}/>
-        <Route path="/visChoice" element={<VisualizationChoicePage/>}/>
+        {/* <Route path="/visChoice" element={<VisualizationChoicePage/>}/> */}
         <Route path="/database/:id" element={<DatabaseDetailsPage/>}/>
         <Route path="/rulemanage" element={<DatabaseRulesManager/>}/>
         <Route path="/forgot-password" element={<ForgotPassword />} />

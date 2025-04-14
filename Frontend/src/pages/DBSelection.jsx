@@ -5,7 +5,7 @@ import ConnectDatabaseModal from "../components/ConnectDatabaseModal";
 import { useNavigate } from 'react-router-dom';
 import VoiceSearchModal from '../components/VoiceSearchModal';
 import Loader from '../components/ui/Loader';
-// import DbPreviewOption from '../components/ui/db-preview';
+import {DbPreviewOption} from '../components/ui/db-preview';
 
 const DatabaseDashboard = () => {
  
@@ -774,11 +774,11 @@ setDatabases(data);
                       </td>
                       <td className="px-3 py-4 text-xs whitespace-nowrap">{new Date(db.lastAccessed).toLocaleDateString()}</td>
                       <td className="px-3 py-4 text-xs whitespace-nowrap">
-                        {/* <DbPreviewOption 
+                        <DbPreviewOption 
                           dbId={db.id} 
                           dbName={db.name} 
                           darkMode={darkMode} 
-                        /> */}
+                        />
                       </td>
                       <td className="px-3 py-4 text-xs whitespace-nowrap">
                         <div className="flex items-center space-x-2">
