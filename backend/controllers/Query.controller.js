@@ -273,3 +273,4 @@ export const processQuery = async (req, res) => {
     });
   }
 };
+export { getDatabaseSchema}
