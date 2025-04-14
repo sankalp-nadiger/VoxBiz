@@ -209,42 +209,4 @@ console.log("🔷 FastAPI response:", fastApiResponse.data);
     return res.status(500).json({ error: "Failed to process the natural language query." });
   }
 };
-
-// Helper function to call Gemini API
-// Helper function to call Gemini API
-async function callGeminiAPI(prompt) {
-  try {
-    const modelName = "gemini-1.5-flash";
-    const model = genAI.getGenerativeModel({ model: modelName });
-    
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
-      },
-    });
-    
-    return result.response.text();
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    throw new Error("Failed to generate mappings with Gemini API");
-  }
-}
-
-// Helper function to parse Gemini response
-function parseGeminiResponse(response) {
-  try {
-    // Find JSON content in the response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error("No valid JSON found in response");
-  } catch (error) {
-    console.error("Failed to parse Gemini response:", error);
-    return {};
-  }
-}
+export { getDatabaseSchema}
