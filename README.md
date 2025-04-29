@@ -32,11 +32,11 @@ VoxBiz enables non-technical decision-makers to interact with their business dat
 - **Node.js + Express.js**
 - **PostgreSQL** (with schema introspection for smart query generation)
 - **NLTK** (for prompt parsing and intent extraction)
-- **GenAI (Claude/Gemini APIs)** for visualization decisions
+- **GenAI (Gemini APIs)** for visualization decisions
 
 ### Integrations:
 - 📩 Nodemailer for email reports
-- 🎤 Web Speech API / Whisper (for voice-to-text)
+- 🎤 Web Speech API (for voice-to-text)
 
 ---
 
