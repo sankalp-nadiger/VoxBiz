@@ -40,5 +40,3 @@ VoxBiz enables non-technical decision-makers to interact with their business dat
 
 ---
 
-## 📁 Project Structure
-/client → React frontend (visualization, input, dashboards) /server → Express backend (routes, query engine, auth) /server/services → AI prompt processor, voice handler, rule engine /server/models → PostgreSQL schema models, rule schema /database → Sample DB schema and migration scripts
