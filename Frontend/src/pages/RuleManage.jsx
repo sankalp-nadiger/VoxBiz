@@ -7,7 +7,8 @@ import PreviewIcon from '@mui/icons-material/Preview';
 import AddIcon from '@mui/icons-material/Add';
 import LockIcon from '@mui/icons-material/Lock';
 
-const API_ENDPOINT = '/api/rules';
+// const API_ENDPOINT = '/api/rules';
+const API_ENDPOINT = 'http://localhost:3000/api/rules';
 
 // Component for managing database query rules
 const DatabaseRulesManager = () => {
@@ -60,8 +61,15 @@ const DatabaseRulesManager = () => {
         // Skip access check and directly set access to true
         setUserHasAccess(true);
         
-        // Fetch available databases
-        const rulesResponse = await fetch('http://localhost:3000/api/database/rules/:dbId');
+         // Fetch available databases with credentials
+    const rulesResponse = await fetch('http://localhost:3000/api/database/:dbId/rules/', {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // Include credentials (cookies) in the request
+    });
+
         const dbData = await dbResponse.json();
         setDatabases(dbData);
         
