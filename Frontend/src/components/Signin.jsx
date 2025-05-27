@@ -144,7 +144,7 @@ const Signin = () => {
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({
+    setFormData(prevState => ({ 
       ...prevState,
       [name]: value
     }));
@@ -196,7 +196,7 @@ const Signin = () => {
       // No need to store token manually since it's in a cookie
   
       setFormData({ name: "", email: "", password: "" });
-      navigate("/main");
+      navigate("/dblist");
   
     } catch (error) {
       console.error("Error:", error.message);
@@ -322,7 +322,7 @@ const Signin = () => {
                   >
                     English
                   </button>
-                  <button
+                  <button     
                     onClick={() => changeLanguage('hindi')}
                     className={`w-full text-left block px-4 py-2 text-sm ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600' : 'text-blue-700 hover:bg-blue-50'}`}
                   >

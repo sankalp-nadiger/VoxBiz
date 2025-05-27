@@ -20,6 +20,7 @@ import ChatBotRoutes from "./routes/ChatBot.route.js";
 //   .then(() => console.log("DB synced with altered schema"))
 //   .catch((err) => console.error("DB sync error:", err));
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 dotenv.config();
 

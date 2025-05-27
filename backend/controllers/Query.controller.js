@@ -60,10 +60,20 @@ async function getDatabaseSchema(databaseId) {
     console.log("📡 Connecting to external DB:", dbEntry.databaseName);
 
     // Temporary Sequelize instance
-    const tempSequelize = new Sequelize(dbEntry.connectionURI, {
-      dialect: "postgres",
-      logging: false,
-    });
+    const isSSL = dbEntry.connectionURI.includes("avnadmin") || dbEntry.connectionURI.includes("sslmode=require");
+    console.log("🔍 DB:", dbEntry.databaseName, " | SSL Required:", isSSL);
+const tempSequelize = new Sequelize(dbEntry.connectionURI, {
+  dialect: "postgres",
+  logging: false,
+  dialectOptions: isSSL
+    ? {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        }
+      }
+    : {},
+});
 
     const [tablesResult] = await tempSequelize.query(`
       SELECT table_name 
@@ -88,7 +98,7 @@ async function getDatabaseSchema(databaseId) {
         type: row.data_type,
       }));
     }
-
+console.log("📦 Fetched schema for", dbEntry.databaseName, ":", schema);
     dbSchemaCache[databaseId] = schema;
     console.log("✅ Fetched schema for", dbEntry.databaseName);
     return schema;

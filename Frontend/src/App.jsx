@@ -21,7 +21,7 @@ const App = () => {
     <Router>
       <Routes>
         <Route path="/" element={<ThreeDMarqueeBg/>} />
-        <Route path="/vox" element={<VoxBizAnimation />} />
+        {/* <Route path="/vox" element={<VoxBizAnimation />} /> */}
         <Route path="/login" element={<Signin />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/main" element={<MainPage />} />

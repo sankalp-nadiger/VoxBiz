@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
-import { PreviewOption } from '../components/ui/link-preview';
+// import { PreviewOption } from '../components/ui/link-preview';
 import { useLocation , useNavigate } from 'react-router-dom';
 
 function VisualizationChoicePage() {
