@@ -1,19 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ChatBox from "./Chat";
-import { MessageSquare } from 'lucide-react';
+import { Settings, Moon, Sun, Globe, LogOut, User, LogIn } from 'lucide-react';
+
 const Navbar = () => {
-    const navigate = useNavigate();
-    const [isChatOpen, setIsChatOpen] = useState(false);
+    // Mock navigation function - replace with your routing logic
+    const navigate = (path) => {
+      console.log(`Navigating to: ${path}`);
+      // window.location.href = path; // Use this for actual navigation
+    };
     const [showMenu, setShowMenu] = useState(false);
     const [theme, setTheme] = useState('light');
+    const [isAuthenticated, setIsAuthenticated] = useState(false); // Replace with your auth logic
     const menuRef = useRef(null);
     const [translations, setTranslations] = useState({
       theme: "Theme",
       lightMode: "Light Mode",
       darkMode: "Dark Mode",
       language: "Language",
-      logout: "Logout"
+      logout: "Logout",
+      login: "Login",
+      signup: "Sign Up"
     });
     
     // Load theme from localStorage on component mount
@@ -21,7 +26,6 @@ const Navbar = () => {
       const storedTheme = localStorage.getItem('mode');
       if (storedTheme) {
         setTheme(storedTheme);
-        // Apply theme to document body
         document.body.classList.toggle('dark-mode', storedTheme === 'dark');
       }
       
@@ -34,7 +38,6 @@ const Navbar = () => {
       // Add click event listener to close menu when clicking outside
       document.addEventListener('mousedown', handleClickOutside);
       
-      // Listen for page loaded events to handle translation requests
       const handlePageLoaded = (event) => {
         if (event.detail && event.detail.needsTranslation) {
           translateContent(event.detail.language || localStorage.getItem('language'));
@@ -54,17 +57,13 @@ const Navbar = () => {
         setShowMenu(false);
       }
     };
-    const handleCloseChat = () => {
-      setIsChatOpen(false);
-    };
+
     const toggleTheme = (newTheme) => {
       setTheme(newTheme);
-      localStorage.setItem('mode', newTheme); // Save to localStorage
+      localStorage.setItem('mode', newTheme);
       document.body.classList.toggle('dark-mode', newTheme === 'dark');
       
-      // Dispatch a custom event for other components to detect
       window.dispatchEvent(new CustomEvent('themeChange', { detail: { theme: newTheme } }));
-      
       setShowMenu(false);
     };
     
@@ -76,36 +75,29 @@ const Navbar = () => {
           return;
         }
         
-        // Get current page translations from current page component
         const currentPageTranslationKeys = window.currentPageTranslationKeys || [];
-        
-        // Common navbar translations that are always needed
-        const navbarKeys = ["theme", "lightMode", "darkMode", "language", "logout"];
-        
-        // Combine all keys that need translation for this request
+        const navbarKeys = ["theme", "lightMode", "darkMode", "language", "logout", "login", "signup"];
         const allKeys = [...navbarKeys, ...currentPageTranslationKeys];
         
-        // Get the corresponding English texts
         const sourceTexts = allKeys.map(key => {
-          // Check if the key is from navbar
           if (navbarKeys.includes(key)) {
             const navbarDefaultTexts = {
               theme: "Theme",
               lightMode: "Light Mode",
               darkMode: "Dark Mode",
               language: "Language",
-              logout: "Logout"
+              logout: "Logout",
+              login: "Login",
+              signup: "Sign Up"
             };
             return navbarDefaultTexts[key];
           } 
-          // Otherwise, get the text from the current page's default texts
           else if (window.currentPageDefaultTexts && window.currentPageDefaultTexts[key]) {
             return window.currentPageDefaultTexts[key];
           }
-          return key; // Fallback to using the key itself
+          return key;
         });
         
-        // Map language codes
         const languageMap = {
           english: 'en',
           hindi: 'hi',
@@ -114,7 +106,6 @@ const Navbar = () => {
         
         const targetLang = languageMap[targetLanguage];
         
-        // Use Google Translate API
         const url = 'https://translation.googleapis.com/language/translate/v2';
         const response = await fetch(`${url}?key=${apiKey}`, {
           method: 'POST',
@@ -134,20 +125,15 @@ const Navbar = () => {
         if (data.data && data.data.translations) {
           const translatedTexts = data.data.translations.map(t => t.translatedText);
           
-          // Create new translations object with translated text for navbar
           const navbarTranslations = {};
-          
           navbarKeys.forEach((key, index) => {
             navbarTranslations[key] = translatedTexts[index];
           });
           
-          // Update navbar translations
           setTranslations(navbarTranslations);
           
-          // Create page-specific translations
           if (currentPageTranslationKeys.length > 0) {
             const pageTranslations = {};
-            
             currentPageTranslationKeys.forEach((key, index) => {
               const translationIndex = navbarKeys.length + index;
               if (translationIndex < translatedTexts.length) {
@@ -155,9 +141,6 @@ const Navbar = () => {
               }
             });
     
-            
-            // Dispatch a custom event for language change with page translations
-            console.log("Dispatching page translations:", pageTranslations);
             window.dispatchEvent(new CustomEvent('languageChange', {
               detail: { 
                 language: targetLanguage,
@@ -168,32 +151,29 @@ const Navbar = () => {
         }
       } catch (error) {
         console.error('Translation error:', error);
-        // Fallback to English if translation fails
         alert(`Translation failed. Defaulting to English. Error: ${error.message}`);
       }
     };
     
     const changeLanguage = (language) => {
-      localStorage.setItem('language', language); // Save to localStorage
+      localStorage.setItem('language', language);
       
       if (language !== 'english') {
         translateContent(language);
       } else {
-        // Reset to English
         setTranslations({
           theme: "Theme",
           lightMode: "Light Mode",
           darkMode: "Dark Mode",
           language: "Language",
-          logout: "Logout"
+          logout: "Logout",
+          login: "Login",
+          signup: "Sign Up"
         });
         
-        // Reset page translations and maintain backward compatibility
         if (window.currentPageDefaultTexts) {
           const defaultTranslations = { ...window.currentPageDefaultTexts };
           
-          // Dispatch event with default translations
-          console.log("Dispatching default English translations");
           window.dispatchEvent(new CustomEvent('languageChange', {
             detail: { 
               language: 'english',
@@ -206,130 +186,205 @@ const Navbar = () => {
       setShowMenu(false);
     };
 
+    const handleLogout = () => {
+      // Add your logout logic here
+      setIsAuthenticated(false);
+      setShowMenu(false);
+    };
+
     return (
-        <nav className={`flex w-full items-center justify-between border-t border-b ${theme === 'dark' ? 'border-neutral-800 text-white' : 'border-neutral-200 text-gray-900'} bg-transparent p-2`}>
-           <div className="flex items-center gap-4">
-           <button
-        type="button" // Explicitly set button type
-        onClick={() => setIsChatOpen(true)}
-        className="inline-flex items-center gap-2 text-gray-300 bg-violet-500 border-0 py-2 px-5 focus:outline-none hover:bg-green-800 hover:text-white rounded text-base"
-      >
-        AI Chatbot <MessageSquare size={24} />
-      </button>
-      
-      {isChatOpen && (
-        <ChatBox
-          onClose={handleCloseChat}
-          theme={theme === 'dark' ? 'dark' : 'light'}
-        />
-      )}
-             <div className="flex items-center gap-2">
-             <img 
-  src="/Navlogo.png" 
-  alt="Logo" 
-  className="size-8 rounded-full object-cover transition-transform duration-300 hover:scale-125" 
-/>
-<h1 className="text-2xl font-bold flex items-center whitespace-nowrap" style={{ fontSize: '1.7rem', lineHeight: '1.5rem' }}>
-  Vox<span className="bg-gradient-to-br from-violet-500 to-pink-500 text-transparent bg-clip-text">Biz</span>
-</h1>
+        <nav className={`flex w-full items-center justify-between ${
+          theme === 'dark' 
+            ? 'bg-black/20 backdrop-blur-lg border-white/10 text-white' 
+            : 'bg-gray-400/15 backdrop-blur-lg border-gray-300/20 text-gray-800'
+        } border-b shadow-sm/50 px-16 py-3 mx-8 rounded-b-xl`}>
+           
+           {/* Logo Section */}
+           <div className="flex items-center gap-3">
+             <div className="relative group">
+               <img 
+                 src="/Navlogo.png" 
+                 alt="Logo" 
+                 className={`size-10 rounded-full object-cover transition-all duration-300 group-hover:scale-110 ${
+                   theme === 'dark' 
+                     ? 'drop-shadow-[0_0_15px_rgba(139,69,199,0.8)] group-hover:drop-shadow-[0_0_25px_rgba(139,69,199,1)]'
+                     : 'drop-shadow-[0_0_10px_rgba(139,69,199,0.6)] group-hover:drop-shadow-[0_0_20px_rgba(139,69,199,0.9)]'
+                 }`}
+               />
+               <div className={`absolute inset-0 rounded-full transition-all duration-300 ${
+                 theme === 'dark'
+                   ? 'bg-violet-500/20 group-hover:bg-violet-500/30'
+                   : 'bg-violet-500/10 group-hover:bg-violet-500/20'
+               } blur-sm group-hover:blur-md`}></div>
              </div>
+             
+             <h1 className="text-2xl font-bold flex items-center whitespace-nowrap cursor-pointer hover:scale-105 transition-transform duration-200" 
+                 style={{ fontSize: '1.8rem', lineHeight: '1.5rem' }}>
+               Vox<span className="bg-gradient-to-br from-violet-500 to-pink-500 text-transparent bg-clip-text">Biz</span>
+             </h1>
            </div>
            
-           <div className="relative" ref={menuRef}>
-             <button 
-               onClick={() => setShowMenu(!showMenu)}
-               className={`${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'} p-2 rounded-lg transition-colors`}
-             >
-               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke={theme === 'dark' ? 'white' : '#2563EB'}>
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-               </svg>
-             </button>
+           {/* Innovative Action Button & Settings Section */}
+           <div className="flex items-center gap-4">
              
-             {showMenu && (
-               <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} ring-1 ring-black ring-opacity-5 z-50`}>
-                 {/* Theme section header */}
-                 <div className={`px-4 py-2 text-xs font-medium border-b ${theme === 'dark' ? 'border-gray-700 text-gray-200' : 'border-gray-200 text-blue-600'}`}>
-                   {translations.theme}
+ {/* Single Cosmic Launch Button for Navbar - Only show when NOT authenticated */}
+{!isAuthenticated && (
+<div className="relative group">
+  <button 
+    onClick={() => console.log('🚀 COSMIC LAUNCH!')}
+    className={`relative px-5 py-2.5 font-semibold rounded-full transition-all duration-500 transform ${
+      theme === 'dark'
+        ? 'bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white'
+        : 'bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-white'
+    } hover:scale-110 active:scale-90 hover:rotate-1 group-hover:shadow-[0_0_40px_rgba(147,51,234,0.7)] overflow-hidden`}
+    style={{
+      backgroundSize: '200% 200%',
+      animation: 'gradient-flow 3s ease infinite'
+    }}
+  >
+    <span className="relative z-10 flex items-center gap-2">
+      <span className="group-hover:animate-spin transition-transform duration-300">🚀</span>
+      Launch
+      <span className="group-hover:animate-pulse">⚡</span>
+    </span>
+    
+    {/* Orbiting Particles */}
+    <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full group-hover:animate-spin opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-pink-400 rounded-full group-hover:animate-bounce opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    
+    {/* Cosmic Trail Effect */}
+    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 opacity-0 group-hover:opacity-30 group-hover:scale-150 transition-all duration-500 blur-sm"></div>
+    
+    {/* Ripple on Click */}
+    <div className="absolute inset-0 rounded-full bg-white opacity-0 group-active:opacity-20 group-active:animate-ping transition-opacity duration-150"></div>
+  </button>
+  
+ {/* CSS for gradient animation */}
+ <style jsx>{`
+    @keyframes gradient-flow {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+  `}</style>
+</div>
+)}
+             
+             {/* Settings Menu */}
+             <div className="relative" ref={menuRef}>
+               <button 
+                 onClick={() => setShowMenu(!showMenu)}
+                 className={`p-2.5 rounded-xl transition-all duration-200 ${
+                   theme === 'dark' 
+                     ? 'bg-gray-800/50 hover:bg-gray-700/60 text-gray-300 hover:text-white border border-gray-600/40 hover:border-gray-500/60 backdrop-blur-sm' 
+                     : 'bg-gray-200/40 hover:bg-gray-300/50 text-gray-600 hover:text-gray-800 border border-gray-300/30 hover:border-gray-400/50 backdrop-blur-sm'
+                 } hover:scale-105 active:scale-95`}
+               >
+                 <Settings size={18} className="transition-transform duration-200 hover:rotate-90" />
+               </button>
+               
+               {showMenu && (
+                 <div className={`absolute right-0 mt-3 w-56 rounded-xl shadow-2xl py-2 ${
+                   theme === 'dark' 
+                     ? 'bg-gray-900/80 backdrop-blur-xl text-white border border-gray-700/50' 
+                     : 'bg-white/80 backdrop-blur-xl text-gray-900 border border-gray-200/50'
+                 } ring-1 ring-black/5 z-50`}>
+                   
+                   {/* Theme Section */}
+                   <div className={`px-4 py-2 text-xs font-semibold border-b ${
+                     theme === 'dark' ? 'border-gray-700/50 text-gray-400' : 'border-gray-200/50 text-gray-500'
+                   } flex items-center gap-2`}>
+                     {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+                     {translations.theme}
+                   </div>
+                   
+                   <button
+                     onClick={() => toggleTheme('light')}
+                     className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                       theme === 'dark' 
+                         ? 'text-gray-300 hover:bg-gray-800/60 hover:text-white' 
+                         : 'text-gray-700 hover:bg-gray-50/60 hover:text-gray-900'
+                     } ${theme === 'light' ? 'bg-violet-50/60 text-violet-700' : ''}`}
+                   >
+                     <Sun size={16} />
+                     {translations.lightMode}
+                   </button>
+                   
+                   <button
+                     onClick={() => toggleTheme('dark')}
+                     className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                       theme === 'dark' 
+                         ? 'text-gray-300 hover:bg-gray-800/60 hover:text-white' 
+                         : 'text-gray-700 hover:bg-gray-50/60 hover:text-gray-900'
+                     } ${theme === 'dark' ? 'bg-gray-800/60 text-white' : ''}`}
+                   >
+                     <Moon size={16} />
+                     {translations.darkMode}
+                   </button>
+                   
+                   {/* Language Section */}
+                   <div className={`px-4 py-2 text-xs font-semibold border-b border-t ${
+                     theme === 'dark' 
+                       ? 'border-gray-700/50 text-gray-400' 
+                       : 'border-gray-200/50 text-gray-500'
+                   } mt-1 flex items-center gap-2`}>
+                     <Globe size={14} />
+                     {translations.language}
+                   </div>
+                   
+                   <button
+                     onClick={() => changeLanguage('english')}
+                     className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                       theme === 'dark' 
+                         ? 'text-gray-300 hover:bg-gray-800/60 hover:text-white' 
+                         : 'text-gray-700 hover:bg-gray-50/60 hover:text-gray-900'
+                     }`}
+                   >
+                     🇺🇸 English
+                   </button>
+                   
+                   <button
+                     onClick={() => changeLanguage('hindi')}
+                     className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                       theme === 'dark' 
+                         ? 'text-gray-300 hover:bg-gray-800/60 hover:text-white' 
+                         : 'text-gray-700 hover:bg-gray-50/60 hover:text-gray-900'
+                     }`}
+                   >
+                     🇮🇳 हिंदी
+                   </button>
+                   
+                   <button
+                     onClick={() => changeLanguage('kannada')}
+                     className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                       theme === 'dark' 
+                         ? 'text-gray-300 hover:bg-gray-800/60 hover:text-white' 
+                         : 'text-gray-700 hover:bg-gray-50/60 hover:text-gray-900'
+                     }`}
+                   >
+                     🇮🇳 ಕನ್ನಡ
+                   </button>
+                   
+                   {/* Logout Section (only if authenticated) */}
+                   {isAuthenticated && (
+                     <>
+                       <div className={`border-t ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200/50'} mt-1`}></div>
+                       
+                       <button
+                         onClick={handleLogout}
+                         className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                           theme === 'dark' 
+                             ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300' 
+                             : 'text-red-600 hover:bg-red-50/60 hover:text-red-700'
+                         }`}
+                       >
+                         <LogOut size={16} />
+                         {translations.logout}
+                       </button>
+                     </>
+                   )}
                  </div>
-                 
-                 {/* Light mode button */}
-                 <button
-                   onClick={() => toggleTheme('light')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
-                     ? 'text-gray-300 hover:bg-gray-700' 
-                     : 'text-blue-700 hover:bg-gray-100'
-                   }`}
-                 >
-                   {translations.lightMode}
-                 </button>
-                 
-                 {/* Dark mode button */}
-                 <button
-                   onClick={() => toggleTheme('dark')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
-                     ? 'text-gray-300 hover:bg-gray-700' 
-                     : 'text-blue-700 hover:bg-gray-100'
-                   }`}
-                 >
-                   {translations.darkMode}
-                 </button>
-                 
-                 {/* Language section header */}
-                 <div className={`px-4 py-2 text-xs font-medium border-b border-t ${theme === 'dark' 
-                   ? 'border-gray-700 text-gray-200' 
-                   : 'border-gray-200 text-blue-600'
-                 } mt-2`}>
-                   {translations.language}
-                 </div>
-                 
-                 {/* English language button */}
-                 <button
-                   onClick={() => changeLanguage('english')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
-                     ? 'text-gray-300 hover:bg-gray-700' 
-                     : 'text-blue-700 hover:bg-gray-100'
-                   }`}
-                 >
-                   English
-                 </button>
-                 
-                 {/* Hindi language button */}
-                 <button
-                   onClick={() => changeLanguage('hindi')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
-                     ? 'text-gray-300 hover:bg-gray-700' 
-                     : 'text-blue-700 hover:bg-gray-100'
-                   }`}
-                 >
-                   Hindi
-                 </button>
-                 
-                 {/* Kannada language button */}
-                 <button
-                   onClick={() => changeLanguage('kannada')}
-                   className={`w-full text-left block px-4 py-2 text-xs ${theme === 'dark' 
-                     ? 'text-gray-300 hover:bg-gray-700' 
-                     : 'text-blue-700 hover:bg-gray-100'
-                   }`}
-                 >
-                   Kannada
-                 </button>
-                 
-                 {/* Logout divider */}
-                 <div className={`border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} mt-2`}></div>
-                 
-                 {/* Logout button */}
-                 <button
-                   onClick={() => {/* Logout logic would go here */}}
-                   className={`w-full text-left block px-4 text-xs ${theme === 'dark' 
-                     ? 'text-red-400 hover:bg-gray-700' 
-                     : 'text-red-600 hover:bg-gray-100'
-                   }`}
-                 >
-                   {translations.logout}
-                 </button>
-               </div>
-             )}
+               )}
+             </div>
            </div>
          </nav>
        );

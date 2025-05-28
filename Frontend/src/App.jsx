@@ -16,12 +16,16 @@ import DatabaseRulesManager from "./pages/RuleManage";
 import ForgotPassword from "./components/ForgotPwd";
 import GoogleCallback from "./components/GoogleCallback";
 
+import VoxBizHeroPage from "./pages/Hero";
+
 const App = () => {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<ThreeDMarqueeBg/>} />
         {/* <Route path="/vox" element={<VoxBizAnimation />} /> */}
+        <Route path="/home" element={<VoxBizHeroPage/>} />
+        {/* Redirect root to login if not authenticated */}
         <Route path="/login" element={<Signin />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/main" element={<MainPage />} />
