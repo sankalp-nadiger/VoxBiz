@@ -31,7 +31,7 @@ export const ThreeDMarquee = ({
   });
 
   return (
-    <div className={cn("w-full h-screen overflow-hidden bg-black", className)}>
+    <div className={cn("w-full h-screen overflow-hidden bg-black opacity-50", className)}>
       <div className="w-full h-full flex items-center justify-center">
         <div 
           className="w-full h-full"

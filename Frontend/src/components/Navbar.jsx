@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 import { Settings, Moon, Sun, Globe, LogOut, User, LogIn } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
     // Mock navigation function - replace with your routing logic
-    const navigate = (path) => {
-      console.log(`Navigating to: ${path}`);
-      // window.location.href = path; // Use this for actual navigation
-    };
+   const navigate = useNavigate();
     const [showMenu, setShowMenu] = useState(false);
     const [theme, setTheme] = useState('light');
     const [isAuthenticated, setIsAuthenticated] = useState(false); // Replace with your auth logic
@@ -231,7 +229,7 @@ const Navbar = () => {
 {!isAuthenticated && (
 <div className="relative group">
   <button 
-    onClick={() => console.log('🚀 COSMIC LAUNCH!')}
+    onClick={() => navigate('/login')}
     className={`relative px-5 py-2.5 font-semibold rounded-full transition-all duration-500 transform ${
       theme === 'dark'
         ? 'bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white'

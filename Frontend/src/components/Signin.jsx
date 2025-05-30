@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 
 const Signin = () => {
   // Mock navigate function for demo
-  const navigate = (path) => {
-    console.log(`Navigate to: ${path}`);
-  };
+ const navigate = useNavigate();
   const [theme, setTheme] = useState('dark');
   const [language, setLanguage] = useState('english');
   const [showMenu, setShowMenu] = useState(false);
