@@ -7,6 +7,23 @@ import nodemailer from "nodemailer";
 
 dotenv.config();
 
+const me = async (req, res) => {
+  try {
+      const token = req.cookies.token;
+      if (!token) return res.status(401).json({ message: 'Not authenticated' });
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findByPk(decoded.id);
+
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      res.status(200).json({ user: { id: user.id, email: user.email, name: user.name } });
+  } catch (error) {
+      res.status(401).json({ message: 'Invalid or expired token' });
+  }
+};
+
+
 const register = async (req, res) => {
     try {
         const { fullName, email, password } = req.body;
@@ -78,6 +95,14 @@ const login = async (req, res) => {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
     }
+};
+const logout = (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: false,        // ✅ Set to true in production (HTTPS)
+    sameSite: "Lax",      // Match this with your login cookie config
+  });
+  return res.status(200).json({ message: "Logout successful" });
 };
 
 // Temporary in-memory store (better to use Redis in production)
@@ -181,5 +206,5 @@ export const resetPassword = async (req, res) => {
       .json({ success: false, message: "Failed to reset password" });
   }
 };
-export { register, login };
+export { register, login , logout , me };
 

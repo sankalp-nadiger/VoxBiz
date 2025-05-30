@@ -1,17 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+
+// Toast Component
+const Toast = ({ message, type, isVisible, onClose }) => {
+  useEffect(() => {
+    if (isVisible) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, onClose]);
+
+  if (!isVisible) return null;
+
+  const bgColor = type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500';
+  const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+
+  return (
+    <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+      <div className="flex items-center gap-2">
+        <span>{icon}</span>
+        <span className="font-medium">{message}</span>
+        <button 
+          onClick={onClose}
+          className="ml-2 text-white/80 hover:text-white"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const Signin = () => {
   // Mock navigate function for demo
  const navigate = useNavigate();
+
   const [theme, setTheme] = useState('dark');
   const [language, setLanguage] = useState('english');
   const [showMenu, setShowMenu] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+  
+  // Validation states
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  
+  // Toast state
+  const [toast, setToast] = useState({
+    message: '',
+    type: 'info',
+    isVisible: false
+  });
+
+  const showToast = (message, type = 'info') => {
+    setToast({
+      message,
+      type,
+      isVisible: true
+    });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
+  };
   
   const [translations, setTranslations] = useState({
     googleSignIn: 'Sign in with Google',
@@ -23,12 +80,37 @@ const Signin = () => {
     signupHere: 'Signup Here',
     forgotPassword: 'Forgot Password?',
     oneClick: 'One click to go',
-    allDigital: 'all accessing.'
+    allDigital: 'all accessing.',
+    signingIn: 'Signing in...'
   });
+
+  // Validation functions
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) return 'Email is required';
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    return '';
+  };
+
+  const validatePassword = (password) => {
+    if (!password) return 'Password is required';
+    if (password.length < 6) return 'Password must be at least 6 characters long';
+    return '';
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    newErrors.email = validateEmail(formData.email);
+    newErrors.password = validatePassword(formData.password);
+    
+    setErrors(newErrors);
+    return !newErrors.email && !newErrors.password;
+  };
 
   const toggleTheme = (newTheme) => {
     setTheme(newTheme);
     setShowMenu(false);
+    showToast(`Switched to ${newTheme} mode`, 'success');
   };
 
   const changeLanguage = async (newLanguage) => {
@@ -36,6 +118,7 @@ const Signin = () => {
     
     if (newLanguage !== 'english') {
       // Translation logic would go here
+      showToast(`Language changed to ${newLanguage}`, 'info');
     } else {
       setTranslations({
         googleSignIn: 'Sign in with Google',
@@ -47,7 +130,8 @@ const Signin = () => {
         signupHere: 'Signup Here',
         forgotPassword: 'Forgot Password?',
         oneClick: 'One click to go',
-        allDigital: 'all accessing.'
+        allDigital: 'all accessing.',
+        signingIn: 'Signing in...'
       });
     }
     
@@ -60,6 +144,25 @@ const Signin = () => {
       ...prevState,
       [name]: value
     }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleInputBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    
+    // Validate on blur
+    if (name === 'email') {
+      const error = validateEmail(value);
+      setErrors(prev => ({ ...prev, email: error }));
+    } else if (name === 'password') {
+      const error = validatePassword(value);
+      setErrors(prev => ({ ...prev, password: error }));
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -146,6 +249,14 @@ const Signin = () => {
 
   return (
     <div className={`${currentTheme.bg} w-screen h-screen flex items-center justify-center transition-colors duration-300`}>
+      {/* Toast Component */}
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
+      
       {/* Animated Background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className={`absolute top-1/4 left-1/4 w-64 h-64 ${theme === 'dark' ? 'bg-blue-500/5' : 'bg-blue-500/10'} rounded-full blur-3xl animate-pulse`}></div>
@@ -164,7 +275,7 @@ const Signin = () => {
           <div className="relative">
             <button 
               onClick={() => setShowMenu(!showMenu)}
-              className={`${currentTheme.buttonBg} ${currentTheme.buttonHover} ${currentTheme.border} backdrop-blur-sm border p-2 rounded-lg transition-all duration-300`}
+              className={`${currentTheme.buttonBg} ${currentTheme.buttonHover} ${currentTheme.border} backdrop-blur-sm border p-2 rounded-lg transition-all duration-300 transform active:scale-95`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${currentTheme.text}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
@@ -176,13 +287,13 @@ const Signin = () => {
                 <div className={`px-3 py-2 text-xs font-medium border-b ${currentTheme.border} text-cyan-400`}>Theme</div>
                 <button
                   onClick={() => toggleTheme('light')}
-                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover}`}
+                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover} transition-all duration-200 active:scale-95`}
                 >
                   Light Mode
                 </button>
                 <button
                   onClick={() => toggleTheme('dark')}
-                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover}`}
+                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover} transition-all duration-200 active:scale-95`}
                 >
                   Dark Mode
                 </button>
@@ -190,19 +301,19 @@ const Signin = () => {
                 <div className={`px-3 py-2 text-xs font-medium border-b border-t ${currentTheme.border} text-cyan-400 mt-2`}>Language</div>
                 <button
                   onClick={() => changeLanguage('english')}
-                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover}`}
+                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover} transition-all duration-200 active:scale-95`}
                 >
                   English
                 </button>
                 <button     
                   onClick={() => changeLanguage('hindi')}
-                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover}`}
+                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover} transition-all duration-200 active:scale-95`}
                 >
                   Hindi
                 </button>
                 <button
                   onClick={() => changeLanguage('kannada')}
-                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover}`}
+                  className={`w-full text-left block px-3 py-2 text-sm ${currentTheme.textSecondary} ${currentTheme.buttonHover} transition-all duration-200 active:scale-95`}
                 >
                   Kannada
                 </button>
@@ -275,15 +386,25 @@ const Signin = () => {
           
           <button
             onClick={handleGoogleSignIn}
-            className={`flex items-center justify-center w-full ${currentTheme.buttonBg} ${currentTheme.buttonHover} ${currentTheme.border} ${currentTheme.text} backdrop-blur-sm border rounded-xl py-2.5 px-4 mb-4 transition-all duration-300`}
+            disabled={isLoading}
+            className={`flex items-center justify-center w-full ${currentTheme.buttonBg} ${currentTheme.buttonHover} ${currentTheme.border} ${currentTheme.text} backdrop-blur-sm border rounded-xl py-2.5 px-4 mb-4 transition-all duration-300 transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-xl`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24">
-              <path
-                d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
-                fill="#4285F4"
-              />
-            </svg>
-            {translations.googleSignIn}
+            {isLoading ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                Loading...
+              </div>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24">
+                  <path
+                    d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
+                    fill="#4285F4"
+                  />
+                </svg>
+                {translations.googleSignIn}
+              </>
+            )}
           </button>
           
           <div className="flex items-center justify-center my-4">
@@ -300,11 +421,20 @@ const Signin = () => {
               <input
                 type="email"
                 name="email"
-                className={`w-full p-2.5 ${currentTheme.inputBg} ${currentTheme.inputBorder} ${currentTheme.text} backdrop-blur-sm border rounded-lg placeholder-gray-400 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all duration-300`}
+                className={`w-full p-2.5 ${currentTheme.inputBg} ${errors.email ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : `${currentTheme.inputBorder} focus:border-cyan-400 focus:ring-cyan-400`} ${currentTheme.text} backdrop-blur-sm border rounded-lg placeholder-gray-400 focus:ring-1 transition-all duration-300`}
                 placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleInputChange}
+                onBlur={handleInputBlur}
               />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-400 flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.email}
+                </p>
+              )}
             </div>
             
             <div>
@@ -314,48 +444,57 @@ const Signin = () => {
               <input
                 type="password"
                 name="password"
-                className={`w-full p-2.5 ${currentTheme.inputBg} ${currentTheme.inputBorder} ${currentTheme.text} backdrop-blur-sm border rounded-lg placeholder-gray-400 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all duration-300`}
+                className={`w-full p-2.5 ${currentTheme.inputBg} ${errors.password ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : `${currentTheme.inputBorder} focus:border-cyan-400 focus:ring-cyan-400`} ${currentTheme.text} backdrop-blur-sm border rounded-lg placeholder-gray-400 focus:ring-1 transition-all duration-300`}
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleInputChange}
+                onBlur={handleInputBlur}
               />
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-400 flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.password}
+                </p>
+              )}
             </div>
             
             <button 
               type="submit"
               onClick={handleSubmit}
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-2.5 rounded-lg font-medium hover:from-cyan-400 hover:to-blue-500 transition-all duration-300 shadow-lg"
+           
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-2.5 rounded-lg font-medium hover:from-cyan-400 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {translations.loginAccount}
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                  {translations.signingIn}
+                </div>
+              ) : (
+                translations.loginAccount
+              )}
             </button>
           </div>
 
           <div className="mt-3 text-center">
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/forgot-password');
-              }}
-              className="text-cyan-400 hover:text-cyan-300 font-medium text-sm"
+            <button
+              onClick={() => navigate('/forgot-password')}
+              className="text-cyan-400 hover:text-cyan-300 font-medium text-sm transition-all duration-200 transform hover:scale-105 active:scale-95"
             >
               {translations.forgotPassword}
-            </a>
+            </button>
           </div>
           
           <div className="mt-4 text-center">
             <p className={`${currentTheme.textMuted} text-sm`}>
               {translations.donotHaveAccount}{' '}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate('/signup');
-                }}
-                className="text-cyan-400 hover:text-cyan-300 font-medium"
+              <button
+                onClick={() => navigate('/signup')}
+                className="text-cyan-400 hover:text-cyan-300 font-medium transition-all duration-200 transform hover:scale-105 active:scale-95"
               >
                 {translations.signupHere}
-              </a>
+              </button>
             </p>
           </div>
         </div>

@@ -62,8 +62,24 @@ function HeroSection() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleGetStarted = () => {
-    navigate('/login');
+  const handleGetStarted = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/auth/me', {
+        method: 'GET',
+        credentials: 'include',
+      });
+  
+      if (res.ok) {
+        // ✅ User is authenticated
+        navigate('/dblist');
+      } else {
+        // ❌ Not authenticated
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      navigate('/login');
+    }
   };
 
   const scrollToDemo = () => {
