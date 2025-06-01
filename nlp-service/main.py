@@ -9,7 +9,8 @@ from pydantic import BaseModel
 from typing import List, Dict,Optional, Any
 import requests
 from dotenv import load_dotenv
-
+from transformers import T5Tokenizer , T5ForConditionalGeneration
+import torch
 # Load environment variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -38,7 +39,7 @@ class TableRelationship(BaseModel):
 # Define request model
 class QueryRequest(BaseModel):
     query: str
-    schema: List[Dict[str, Any]]
+    schema_: List[Dict[str, Any]]
     relationships: Optional[List[TableRelationship]] = []
     tableAliases: Optional[Dict[str, str]] = {}
     columnAliases: Optional[Dict[str, List[str]]] = {}
@@ -1182,3 +1183,17 @@ class EnhancedSQLGenerator:
                 success=False,
                 error=str(e)
             )
+    
+class QuerySchema(BaseModel):
+        query: str
+        schema: dict
+tokenizer = T5Tokenizer.from_pretrained("tscholak/t5.1.1.lm100k.base",token="hf_xsoQMaQjXhNWjQHNEgIZGgXzndXcyMG", use_fast=False)
+model = T5ForConditionalGeneration.from_pretrained("tscholak/t5.1.1.lm100k.base")
+
+@app.post("/generate-sql")
+def generate_sql(data: QuerySchema):
+        input_text = f"{data.query} <SCHEMA> {str(data.schema)}"
+        inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        outputs = model.generate(**inputs, max_new_tokens=256)
+        sql = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return {"sql": sql}
