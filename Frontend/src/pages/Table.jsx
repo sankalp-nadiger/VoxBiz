@@ -1084,6 +1084,22 @@ const navigateToGraphView = () => {
         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
     [order, orderBy, page, rowsPerPage, filteredRows],
   );
+  const {  naturalDescription, reasoning } = location.state || {};
+
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
+  const [popupContent, setPopupContent] = useState('');
+  const [popupTitle, setPopupTitle] = useState('');
+
+  const handleShowPopup = (type) => {
+    if (type === 'description') {
+      setPopupTitle('📊 Database Description');
+      setPopupContent(naturalDescription || 'No description available.');
+    } else if (type === 'reasoning') {
+      setPopupTitle('🧠 Query Reasoning');
+      setPopupContent(reasoning || 'No reasoning available.');
+    }
+    setShowInfoPopup(true);
+  };
 
   return ( 
     <Box 
@@ -1321,6 +1337,43 @@ const navigateToGraphView = () => {
     onFilter={handleFilter}
     filterOptions={filterOptions}
   />
+
+      {/* Buttons to trigger popup */}
+      <div className="flex gap-4 mb-6">
+        <button
+          onClick={() => handleShowPopup('description')}
+          className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+        >
+          View Database Description
+        </button>
+        <button
+          onClick={() => handleShowPopup('reasoning')}
+          className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700"
+        >
+          View Query Reasoning
+        </button>
+      </div>
+
+      {/* The popup itself */}
+      {showInfoPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white dark:bg-slate-800 text-black dark:text-white p-6 rounded-lg shadow-lg w-full max-w-xl relative">
+            <button
+              onClick={() => setShowInfoPopup(false)}
+              className="absolute top-2 right-3 text-xl font-bold text-gray-600 dark:text-gray-300 hover:text-red-500"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-semibold mb-4">{popupTitle}</h2>
+            <div className="max-h-96 overflow-y-auto whitespace-pre-wrap">
+              {popupContent}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Render visualization data here */}
+      {/* ... */}
   
   {/* Navigation to Graphs Button with persistent text next to icon */}
   <ButtonBase
