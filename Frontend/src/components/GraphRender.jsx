@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";  
+import "../index.css";
 import Navbar from './Navbar';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, LabelList, ScatterChart,
   Scatter } from "recharts";
@@ -256,8 +257,8 @@ const clearQueryHistory = async () => {
   });
 
   return (
-    <div className={`App p-6 min-h-screen w-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
-      <Navbar darkMode={darkMode} />
+<div className={`App pt-0 px-10 pb-1 min-h-screen w-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>      
+  <Navbar darkMode={darkMode} />
       {!isFullScreen && (
         <>
     
@@ -1044,7 +1045,7 @@ const AIInsightsPanel = ({ data, graphType, darkMode }) => {
       const dataContext = JSON.stringify(data.slice(0, 10));
   
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
           contents: [
             {
