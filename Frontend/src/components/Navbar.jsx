@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef, use } from 'react';
 import { Settings, Moon, Sun, Globe, LogOut, User, LogIn } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; // adjust path as needed
 
 const Navbar = () => {
+  const location = useLocation();
+const isHomePage = location.pathname === '/home' || location.pathname === '/';
+console.log("isHomePage:", isHomePage);
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const [theme, setTheme] = useState('light');
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Replace with your auth logic
+  // const [isLoading, setIsLoading] = useState(true);
+  // const [isAuthenticated, setIsAuthenticated] = useState(false); // Replace with your auth logic
   const menuRef = useRef(null);
   const [translations, setTranslations] = useState({
     theme: "Theme",
@@ -18,31 +23,9 @@ const Navbar = () => {
     signup: "Sign Up"
   });
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('http://localhost:3000/api/auth/me', {
-          method: 'GET',
-          credentials: 'include', // 👈 VERY IMPORTANT to send the cookie
-        });
 
-        if (res.ok) {
-          const data = await res.json();
-          setIsAuthenticated(true);
-          console.log("Authenticated user:", data.user);
-          console.log("set show menu", showMenu);
-          console.log("isAuthenticated:", isAuthenticated);
-        } else {
-          setIsAuthenticated(false);
-        }
-      } catch (err) {
-        console.error("Auth check failed:", err);
-        setIsAuthenticated(false);
-      }
-    };
 
-    checkAuth();
-  }, [isAuthenticated]);
+  const { isAuthenticated, logout, isLoading } = useAuth();
 
   // Load theme from localStorage on component mount
   useEffect(() => {
@@ -209,15 +192,20 @@ const Navbar = () => {
     setShowMenu(false);
   };
 
-  const handleLogout = async () => {
-    // Add your logout logic here
-    await fetch('http://localhost:3000/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
+  const handlelaunch = () => {
+    if (isAuthenticated) {
+      navigate('/dblist');
+    } else {
+      navigate('/login');
+    }
+  };
   
-    setIsA
-    setIsAuthenticated(false);
+  useEffect(() => {
+    console.log("Updated isAuthenticated:", isAuthenticated);
+  }, [isAuthenticated]);
+
+  const handleLogout = async () => {
+    await logout(); // from AuthContext
     setShowMenu(false);
   };
 
@@ -254,10 +242,10 @@ const Navbar = () => {
       <div className="flex items-center gap-4">
 
         {/* Single Cosmic Launch Button for Navbar - Only show when NOT authenticated */}
-        {!isAuthenticated && (
+        {isHomePage && !isLoading && (
           <div className="relative group">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => handlelaunch()}
               className={`relative px-5 py-2.5 font-semibold rounded-full transition-all duration-500 transform ${theme === 'dark'
                 ? 'bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 text-white'
                 : 'bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-white'
@@ -293,7 +281,23 @@ const Navbar = () => {
   `}</style>
           </div>
         )}
+        {/* Logout Section (only if authenticated) */}
+        {isAuthenticated && (
+          <>
+            <div className={`border-t ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200/50'} mt-1`}></div>
 
+            <button
+              onClick={handleLogout}
+              className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${theme === 'dark'
+                  ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
+                  : 'text-red-600 hover:bg-red-50/60 hover:text-red-700'
+                }`}
+            >
+              <LogOut size={16} />
+              {translations.logout}
+            </button>
+          </>
+        )}
         {/* Settings Menu */}
         <div className="relative" ref={menuRef}>
           <button
@@ -382,25 +386,8 @@ const Navbar = () => {
 
 
             </div>
-          )}
-        </div>
-        {/* Logout Section (only if authenticated) */}
-        {isAuthenticated && (
-          <>
-            <div className={`border-t ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200/50'} mt-1`}></div>
-
-            <button
-              onClick={handleLogout}
-              className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${theme === 'dark'
-                  ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
-                  : 'text-red-600 hover:bg-red-50/60 hover:text-red-700'
-                }`}
-            >
-              <LogOut size={16} />
-              {translations.logout}
-            </button>
-          </>
-        )}
+          )}       </div>
+       
 
       </div>
     </nav>
