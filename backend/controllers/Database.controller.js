@@ -2,7 +2,11 @@ import Database from "../models/Database.model.js";
 import User from "../models/User.model.js";
 import { Sequelize } from "sequelize";
 import sequelize from '../config/Database.config.js'; // your pg client instance
-import { differenceInDays } from 'date-fns';
+
+
+import { getDatabaseSchema } from "./Query.controller.js"; // Adjust path as needed
+import { callGeminiAPI } from "./Query.controller.js"; // Ensure it's exported
+import { differenceInDays } from "date-fns"; // If not already imported
 
 // Create a new database entry
 export const createDatabase = async (req, res) => {
@@ -172,6 +176,7 @@ export const listDatabases = async (req, res) => {
 
 
 
+
 export const getDatabaseInfo = async (req, res) => {
   try {
     const { id } = req.params;
@@ -185,8 +190,6 @@ export const getDatabaseInfo = async (req, res) => {
     sevenDaysAgo.setDate(now.getDate() - 7);
 
     const dbRecord = await Database.findByPk(id);
-    console.log("DB Record ->>", dbRecord);
-
     if (!dbRecord) {
       return res.status(404).json({ success: false, message: 'Database not found' });
     }
@@ -238,7 +241,45 @@ export const getDatabaseInfo = async (req, res) => {
     );
     const tables = tableResult.map(row => row.table_name);
 
-    // ✅ Compose dbInfo object tailored for frontend
+    // ✅ Get database schema for Gemini recommendation
+    const schema = await getDatabaseSchema(id);
+
+    // ✨ Gemini prompt for recommended questions
+    const recommendationPrompt = `
+    Based on the following PostgreSQL database schema:
+    ${JSON.stringify(schema)}
+    
+    Generate 5-7 insightful and relevant natural language questions that are **strictly suitable for graphical or tabular data visualizations**. 
+    These should include:
+    - Quantitative comparisons over time
+    -  aggregations
+    - Trends and patterns
+    - Rankings or distributions
+    - Grouped statistics
+    
+    Examples:
+    - "What is the monthly sales trend over the last year?"
+    - "Which products had the highest returns last quarter?"
+    - "Show the average response time per endpoint in the last 7 days"
+    - "Display user signups by week"
+    - "How many orders were placed per category?"
+    
+    Return only a JSON array of strings, like:
+    ["Question 1", "Question 2", ...]
+    `;
+
+    const recommendationResponse = await callGeminiAPI(recommendationPrompt);
+    let recommendedQuestions = [];
+
+    try {
+      const jsonMatch = recommendationResponse.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        recommendedQuestions = JSON.parse(jsonMatch[0]);
+      }
+    } catch (err) {
+      console.warn("⚠️ Failed to parse Gemini recommendations:", err.message);
+    }
+
     const dbInfo = {
       id: dbRecord.id,
       name: dbRecord.databaseName,
@@ -252,7 +293,8 @@ export const getDatabaseInfo = async (req, res) => {
       successRate,
       avgResponseTime: `${avgResponseTime}`,
       queryFrequency,
-      tables
+      tables,
+      recommendedQuestions  // ✨ Included in frontend response
     };
 
     return res.status(200).json(dbInfo);
