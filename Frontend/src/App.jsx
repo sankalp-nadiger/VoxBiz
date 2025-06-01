@@ -15,34 +15,47 @@ import DataTable from "./pages/Table";
 import DatabaseRulesManager from "./pages/RuleManage";
 import ForgotPassword from "./components/ForgotPwd";
 import GoogleCallback from "./components/GoogleCallback";
+import NotFound from "./pages/NotFound";
 
 import VoxBizHeroPage from "./pages/Hero";
+import PrivateRoute from "./components/PrivateRoute";
+import PublicRoute from "./components/PublicRoute";
+
 
 const App = () => {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<ThreeDMarqueeBg/>} />
-        {/* <Route path="/vox" element={<VoxBizAnimation />} /> */}
-        <Route path="/home" element={<VoxBizHeroPage/>} />
-        {/* Redirect root to login if not authenticated */}
-        <Route path="/login" element={<Signin />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/main" element={<MainPage />} />
-        <Route path="/query" element={<QueryProcessor/>}/>
-        <Route path="/table" element={<DataTable/>}/>
-        <Route path="/selectgraph" element={<Selectg/>}/>
-        <Route path="/rendergraph" element={<GraphRender/>}/>
-        <Route path="/dblist" element={<DatabaseDashboard/>}/>
-        {/* <Route path="/visChoice" element={<VisualizationChoicePage/>}/> */}
-        <Route path="/database/:id" element={<DatabaseDetailsPage/>}/>
-        <Route path="/rulemanage" element={<DatabaseRulesManager/>}/>
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/auth/google/callback" element={<GoogleCallback />} />
-
-      </Routes>
-    </Router>
+ 
+      return (
+        <Router>
+          <Routes>
+            {/* Landing page (open to all) */}
+             <Route path="/" element={<ThreeDMarqueeBg />} />
+             <Route path="/home" element={<VoxBizHeroPage />} />
+    
+            {/* Public Routes */}
+            <Route element={<PublicRoute />}>
+          
+              <Route path="/login" element={<Signin />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/auth/google/callback" element={<GoogleCallback />} />
+            </Route>
+    
+            {/* Private Routes */}
+            <Route element={<PrivateRoute />}>
+        
+              <Route path="/main" element={<MainPage />} />
+              <Route path="/query" element={<QueryProcessor />} />
+              <Route path="/table" element={<DataTable />} />
+              <Route path="/selectgraph" element={<Selectg />} />
+              <Route path="/rendergraph" element={<GraphRender />} />
+              <Route path="/dblist" element={<DatabaseDashboard />} />
+              <Route path="/database/:id" element={<DatabaseDetailsPage />} />
+              <Route path="/rulemanage" element={<DatabaseRulesManager />} />
+              <Route path="*" element={<NotFound />} /></Route>
+          </Routes>
+        </Router>
   );
 };
 
 export default App;
+{/* <Route path="/visChoice" element={<VisualizationChoicePage/>}/> */}
