@@ -11,6 +11,7 @@ const DatabaseDetailsPage = ( )=> {
   const navigate = useNavigate();
   const location = useLocation();
   const dbInfo = location.state?.dbInfo;
+  const recommendedQuestions = dbInfo?.recommendedQuestions || [];
   // Static database data for testing
   const [database, setDatabase] = useState({
     id: '',
@@ -38,8 +39,8 @@ const DatabaseDetailsPage = ( )=> {
     console.log("Database Info:", dbInfo);
       setDatabase({
         id: dbInfo?.id || '123',
-        name: dbInfo?.name || 'Production MySQL',
-        type: dbInfo?.type || 'MySQL',
+        name: dbInfo?.name || 'PostgresSQL',
+        type: dbInfo?.type || 'PostgresSQL',
         status: dbInfo?.status || 'Connected',
         lastAccessed: dbInfo?.lastAccessed || '2025-04-01'
       });
@@ -177,21 +178,21 @@ const DatabaseDetailsPage = ( )=> {
       setErrorMessage('Database ID not found. Please try again.');
       return;
     }
-    // Check if query is empty
+  
     if (!query) {
       console.error("Query is empty");
       setProcessingVoice(false);
       setErrorMessage('Query cannot be empty. Please try again.');
       return;
     }
-    // Make an API call to the backend database service
+  
     fetch(`http://localhost:3000/api/query/process/${dbId}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',        
+        'Content-Type': 'application/json',
       },
-      credentials: 'include', // Include cookies for authentication
-      body: JSON.stringify({ transcript: query }) 
+      credentials: 'include',
+      body: JSON.stringify({ transcript: query })
     })
       .then(response => {
         if (!response.ok) {
@@ -200,33 +201,34 @@ const DatabaseDetailsPage = ( )=> {
         return response.json();
       })
       .then(response => {
-        console.log("Database query successful:", response.data);
+        console.log("Database query successful:", response);
+  
+        const { data, naturalDescription, reasoning } = response;
+  
         setProcessingVoice(false);
-        
-        // Save the data to sessionStorage
+  
         try {
-          sessionStorage.setItem('visualizationData', JSON.stringify(response.data));
-          console.log("Data saved to sessionStorage successfully");
+          sessionStorage.setItem('visualizationData', JSON.stringify(data));
+          sessionStorage.setItem('naturalDescription', naturalDescription);
+          sessionStorage.setItem('queryReasoning', reasoning);
+          console.log("Data, description, and reasoning saved to sessionStorage");
         } catch (err) {
           console.error("Error saving to sessionStorage:", err);
-          // If sessionStorage fails (e.g., quota exceeded), continue with navigation anyway
         }
-        
-        // On success, navigate to the choice page
-        navigate('/table', { state: { visualizationData: response.data } });
+  
+        navigate('/table', {
+          state: {
+            visualizationData: data,
+            naturalDescription,
+            reasoning
+          }
+        });
       })
-      
       .catch(error => {
         console.error("Error processing database query:", error);
         setProcessingVoice(false);
-        
-        // Show failure message
         setErrorMessage('Database query failed. Please try again.');
-        
-        // Clear error message after 5 seconds
-        setTimeout(() => {
-          setErrorMessage('');
-        }, 5000);
+        setTimeout(() => setErrorMessage(''), 5000);
       });
   };
   const saveCredentials = async () => {
@@ -283,34 +285,27 @@ const DatabaseDetailsPage = ( )=> {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 md:px-6 lg:flex">
-        {/* Left Sidebar - 40% width with background image */}
-        <div className="lg:w-2/5 mb-6 lg:mb-0 lg:pr-6 relative">
-          <div className="rounded-xl overflow-hidden h-full flex items-center justify-center">
-            <img 
-              src="/detail-bg.png" 
-              alt="Database visualization" 
-              className="w-full h-full object-contain p-4" 
-            />
-            <div className={`absolute inset-0 flex flex-col items-center justify-center text-center p-6 ${darkMode ? 'bg-slate-900/60' : 'bg-white/40'}`}>
-              <h2 className="text-2xl font-bold mb-2">{database.name}</h2>
-              <p className="text-lg mb-4">{database.type} Database</p>
-              <div className={`px-4 py-2 rounded-full ${darkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800'}`}>
-                {database.status || 'Connected'}
-              </div>
-              
-              {/* Rule Manager Button - Only show if user has read-write permissions */}
-              
-                <button
-                  onClick={handleNavigateToRuleManager}
-                  className="mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 flex items-center justify-center"
-                >
-                  <Cog className="h-5 w-5 mr-2" />
-                  {translations.manageRules}
-                </button>
-              
-            </div>
-          </div>
-        </div>
+{/* Left Sidebar - 40% width displaying recommended questions */}
+<div className="lg:w-2/5 mb-6 lg:mb-0 lg:pr-6 relative">
+  <div className="rounded-xl overflow-hidden h-full flex flex-col p-6 bg-gradient-to-b from-slate-800 to-slate-900 text-white">
+    <h2 className="text-2xl font-bold mb-4">Try These Questions for the Database</h2>
+    <div className="space-y-4 overflow-y-auto max-h-[80vh] pr-2">
+      {recommendedQuestions.length > 0 ? (
+        recommendedQuestions.map((question, index) => (
+          <button
+            key={index}
+            onClick={() => handleDatabaseQuery(question)}
+            className="w-full text-left bg-slate-700 hover:bg-slate-600 transition-all p-3 rounded-lg shadow-sm"
+          >
+            {question}
+          </button>
+        ))
+      ) : (
+        <p className="text-slate-300 text-sm">No suggestions at the moment.</p>
+      )}
+    </div>
+  </div>
+</div>
 
         {/* Main Content - Right side */}
         <div className="lg:w-3/5">
@@ -322,6 +317,13 @@ const DatabaseDetailsPage = ( )=> {
                 {database.type} • {database.lastAccessed}
               </p>
             </div>
+            <button
+                  onClick={handleNavigateToRuleManager}
+                  className="mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 flex items-center justify-center"
+                >
+                  <Cog className="h-5 w-5 mr-2" />
+                  {translations.manageRules}
+            </button>
 
           </div>
 
