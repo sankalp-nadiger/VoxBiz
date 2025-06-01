@@ -1,5 +1,7 @@
 import React, { useState, useEffect, use } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from "../context/AuthContext";  // Adjust path if needed
+
 
 
 // Toast Component
@@ -35,6 +37,13 @@ const Toast = ({ message, type, isVisible, onClose }) => {
 };
 
 const Signin = () => {
+
+  const { login , isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    console.log("Auth check: ", login, "AuthContext:", isAuthenticated);
+  }, []);
+
   // Mock navigate function for demo
  const navigate = useNavigate();
 
@@ -189,26 +198,20 @@ const Signin = () => {
     }
   
     try {
-      const response = await fetch("http://localhost:3000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({ email, password })
-      });
-  
-      const data = await response.json();
-  
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong!");
-      }
+      const result = await login(formData.email, formData.password);
+
+      if (result.success) {
+        // On success, navigate to dashboard or wherever
+   
   
       console.log("Login successful!");
   
       setFormData({ email: "", password: "" });
       navigate("/dblist");
-  
+      }else {
+        // Show error message from context login
+        showToast(result.message || "Login failed", "error");
+      }
     } catch (error) {
       console.error("Error:", error.message);
       console.log(error.message || "Login failed");
