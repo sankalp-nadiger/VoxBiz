@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import Loader from "./ui/Loader";
 import axios from "axios";
-
+import { SiPostgresql, } from 'react-icons/si';
+import { GrMysql } from 'react-icons/gr';
 const ConnectDatabaseModal = ({ darkMode, onClose }) => {
   const [step, setStep] = useState("info");
   const [connectionMethod, setConnectionMethod] = useState("connectionString");
   const [formData, setFormData] = useState({
+    dbType: "PostgreSQL", // defaul
     dbName: "",
     connectionString: "",
     username: "",
@@ -14,6 +16,12 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
     port: "5432",
   });
   const [error, setError] = useState("");
+
+  const dbTypeIconMap = {
+    PostgreSQL: <SiPostgresql className="text-blue-600 text-5xl drop-shadow" />,
+    MySQL: <GrMysql className="text-5xl mb-1 text-blue-600 drop-shadow" />
+
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -27,22 +35,27 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
   const submitForm = async (e) => {
     e.preventDefault();
     setStep("loading");
-  
+
     let dataToSubmit = {
       databaseName: formData.dbName,
-      connectionURI: formData.connectionString
+      connectionURI: formData.connectionString,
+      type: formData.dbType.toLowerCase(), // postgres or mysql
     };
-  
+
     // If using credentials method, build connection string
     if (connectionMethod === "credentials") {
-      dataToSubmit.connectionURI = `postgresql://${formData.username}:${formData.password}@${formData.host}:${formData.port}/${formData.dbName}`;
+      if (formData.dbType === "PostgreSQL") {
+        dataToSubmit.connectionURI = `postgresql://${formData.username}:${formData.password}@${formData.host}:${formData.port}/${formData.dbName}`;
+      } else if (formData.dbType === "MySQL") {
+        dataToSubmit.connectionURI = `mysql://${formData.username}:${formData.password}@${formData.host}:${formData.port}/${formData.dbName}`;
+      }
     }
-  
+
     try {
       const response = await axios.post("http://localhost:3000/api/database/connect", dataToSubmit, {
         withCredentials: true
       });
-  
+
       if (response.status === 201) {
         setStep("success");
       } else {
@@ -59,7 +72,7 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
   };
   const isFormValid = () => {
     if (!formData.dbName) return false;
-    
+
     if (connectionMethod === "connectionString") {
       return !!formData.connectionString;
     } else {
@@ -92,13 +105,13 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
                 <li>Database credentials (username, password, host)</li>
               </ul>
               <p className="mt-2 text-sm">
-  To obtain these from PostgreSQL:
-</p>
-<ol className="list-decimal list-inside mt-1 ml-4 text-sm">
-  <li>Login to your PostgreSQL admin panel</li>
-  <li>Locate your existing database</li>
-  <li>Get the connection credentials</li>
-</ol>
+                To obtain these from PostgreSQL:
+              </p>
+              <ol className="list-decimal list-inside mt-1 ml-4 text-sm">
+                <li>Login to your PostgreSQL admin panel</li>
+                <li>Locate your existing database</li>
+                <li>Get the connection credentials</li>
+              </ol>
             </div>
             <button
               onClick={() => setStep("form")}
@@ -113,6 +126,38 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
           <form onSubmit={submitForm}>
             <div className="space-y-4 mb-6">
               <div>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-2">
+                    Database Type <span className="text-red-500">*</span>
+                  </label>
+
+                  <div className="flex gap-4">
+                    {["PostgreSQL", "MySQL"].map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, dbType: type }))}
+                        className={`
+          flex flex-col items-center justify-center px-4 py-3 rounded-md border w-32 transition-all
+          ${formData.dbType === type
+                            ? darkMode
+                              ? 'bg-blue-700 border-blue-500 text-white'
+                              : 'bg-blue-100 border-blue-500 text-blue-900'
+                            : darkMode
+                              ? 'bg-gray-700 border-gray-500 text-white'
+                              : 'bg-white border-gray-300 text-gray-800'}
+        `}
+                      >
+                        {type === "PostgreSQL" ? (
+                          <SiPostgresql className="text-2xl mb-1" />
+                        ) : (
+                          <GrMysql className="text-2xl mb-1 text-blue-600" />
+                        )}
+                        <span className="text-sm">{type}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label className="block text-sm font-medium mb-1">Database Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
@@ -123,7 +168,7 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
                   className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
                 />
               </div>
-              
+
               <div className="flex items-center space-x-4 border-b pb-4 mb-4">
                 <label className="flex items-center">
                   <input
@@ -159,68 +204,71 @@ const ConnectDatabaseModal = ({ darkMode, onClose }) => {
                     placeholder="postgresql://username:password@host:port/database"
                     className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
                   />
+
                 </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Username <span className="text-red-500">*</span></label>
-                    <input
-                      type="text"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      required={connectionMethod === "credentials"}
-                      className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Password <span className="text-red-500">*</span></label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      required={connectionMethod === "credentials"}
-                      className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Host <span className="text-red-500">*</span></label>
-                    <input
-                      type="text"
-                      name="host"
-                      value={formData.host}
-                      onChange={handleInputChange}
-                      required={connectionMethod === "credentials"}
-                      placeholder="localhost"
-                      className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Port</label>
-                    <input
-                      type="text"
-                      name="port"
-                      value={formData.port}
-                      onChange={handleInputChange}
-                      placeholder="5432"
-                      className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
-                    />
-                  </div>
-                </>
-              )}
+
+              )
+                : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Username <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        name="username"
+                        value={formData.username}
+                        onChange={handleInputChange}
+                        required={connectionMethod === "credentials"}
+                        className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Password <span className="text-red-500">*</span></label>
+                      <input
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required={connectionMethod === "credentials"}
+                        className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Host <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        name="host"
+                        value={formData.host}
+                        onChange={handleInputChange}
+                        required={connectionMethod === "credentials"}
+                        placeholder="localhost"
+                        className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Port</label>
+                      <input
+                        type="text"
+                        name="port"
+                        value={formData.port}
+                        onChange={handleInputChange}
+                        placeholder="5432"
+                        className={`w-full px-3 py-2 rounded-md ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} border`}
+                      />
+                    </div>
+                  </>
+                )}
             </div>
-            
             <button
               type="submit"
               disabled={!isFormValid()}
-              className={`w-full py-2 rounded-lg ${
-                isFormValid() 
-                  ? darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+              className={`w-full py-2 rounded-lg ${isFormValid()
+                  ? darkMode
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-blue-500 hover:bg-blue-600'
                   : 'bg-gray-400 cursor-not-allowed'
-              } text-white`}
+                } text-white`}
             >
-              Connect
+              {`Connect to ${formData.dbType} Database`}
             </button>
           </form>
         )}
