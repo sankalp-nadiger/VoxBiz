@@ -58,39 +58,68 @@ async function getDatabaseSchema(databaseId) {
       throw new Error("Invalid database ID or missing connection URI.");
     }
 
-    console.log("📡 Connecting to external DB:", dbEntry.databaseName);
+    const { connectionURI, databaseName, dbType } = dbEntry;
 
-    // Temporary Sequelize instance
-    const isSSL = dbEntry.connectionURI.includes("avnadmin") || dbEntry.connectionURI.includes("sslmode=require");
-    console.log("🔍 DB:", dbEntry.databaseName, " | SSL Required:", isSSL);
-    const tempSequelize = new Sequelize(dbEntry.connectionURI, {
-      dialect: "postgres",
+    console.log("📡 Connecting to external DB:", databaseName);
+
+    // Determine if SSL is required
+    const isSSL = connectionURI.includes("avn") || connectionURI.includes("sslmode=require");
+    console.log("🔍 DB:", databaseName, " | SSL Required:", isSSL, "| Type:", dbType);
+
+    const tempSequelize = new Sequelize(connectionURI, {
+      dialect: dbType.toLowerCase(), // 🟢 use dbType from the database
       logging: false,
       dialectOptions: isSSL
         ? {
-          ssl: {
-            require: true,
-            rejectUnauthorized: false,
+            ssl: {
+              require: true,
+              rejectUnauthorized: false,
+            },
           }
-        }
         : {},
     });
 
-    const [tablesResult] = await tempSequelize.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-    `);
+    let tablesResult, tablesQuery;
 
+    if (dbType === "PostgreSQL") {
+      // PostgreSQL-specific query
+      tablesQuery = `
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+      `;
+    } else if (dbType === "MySQL") {
+      // MySQL-specific query
+      tablesQuery = `
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = DATABASE()
+      `;
+    } else {
+      throw new Error("Unsupported database type: " + dbType);
+    }
+
+    [tablesResult] = await tempSequelize.query(tablesQuery);
     const tables = tablesResult.map((row) => row.table_name);
     const schema = {};
 
     for (const table of tables) {
-      const [columnsResult] = await tempSequelize.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = :table
-      `, {
+      let columnsQuery;
+      if (dbType === "PostgreSQL") {
+        columnsQuery = `
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_schema = 'public' AND table_name = :table
+        `;
+      } else if (dbType === "MySQL") {
+        columnsQuery = `
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_schema = DATABASE() AND table_name = :table
+        `;
+      }
+
+      const [columnsResult] = await tempSequelize.query(columnsQuery, {
         replacements: { table },
       });
 
@@ -99,9 +128,10 @@ async function getDatabaseSchema(databaseId) {
         type: row.data_type,
       }));
     }
-    console.log("📦 Fetched schema for", dbEntry.databaseName, ":", schema);
+
+    console.log("📦 Fetched schema for", databaseName, ":", schema);
     dbSchemaCache[databaseId] = schema;
-   
+
     return schema;
   } catch (error) {
     console.error("❌ Error fetching schema for DB ID:", databaseId, error.message);
