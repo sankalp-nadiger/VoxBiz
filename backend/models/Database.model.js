@@ -29,7 +29,18 @@ const Database = sequelize.define("Database", {
         type: DataTypes.ENUM("owner", "read-only"),
         allowNull: false,
         defaultValue: "read-only", // By default, a connected database is read-only
-    }
+    },
+    dbType: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "PostgreSQL", // Default to PostgreSQL
+        validate: {
+          isIn: {
+            args: [["PostgreSQL", "MySQL"]],
+            msg: "dbType must be either 'PostgreSQL' or 'MySQL'"
+          }
+        }
+      }
 });
 
 User.hasMany(Database, { foreignKey: "userId", onDelete: "CASCADE" });
