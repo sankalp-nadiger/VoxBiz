@@ -12,15 +12,30 @@ import nodemailer from 'nodemailer';
 
 
 import sequelize from "./config/Database.config.js";
+import './models/Database.model.js'; // ensure model is imported
+
 import cookieParser from "cookie-parser";
 import QueryLog from "./models/QueryLog.model.js"; // <-- important to import!
 import ChatBotRoutes from "./routes/ChatBot.route.js";
 
-// sequelize.sync({ alter: true })
-//   .then(() => console.log("DB synced with altered schema"))
-//   .catch((err) => console.error("DB sync error:", err));
+
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
+// dababase model sync
+// (async () => {
+//   try {
+//     await sequelize.authenticate();
+//     console.log('✅ Database connected');
+
+//     // ⚠️ Sync models (modifies DB schema to match models)
+//     await sequelize.sync({ alter: true }); // alter = safe schema update
+//     console.log('✅ Models synced with database');
+
+//   } catch (error) {
+//     console.error('❌ Unable to connect or sync database:', error);
+//   }
+// })();
 
 dotenv.config();
 
