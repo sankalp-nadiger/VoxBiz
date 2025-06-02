@@ -46,14 +46,25 @@ export const createDatabase = async (req, res) => {
     // Verify connection before creating
     try {
       // Use getDatabaseSchema to validate the connection
-      const tempSequelize = new Sequelize(connectionURI, {
-        dialect: "postgres",
-        logging: false,
-        dialectOptions: {
-          ssl: false, // Set to true if needed
-          connectTimeout: 10000 // 10 seconds
-        }
-      });
+     // Detect dialect from URI
+let dialect;
+if (connectionURI.startsWith("postgres://") || connectionURI.startsWith("postgresql://")) {
+  dialect = "postgres";
+} else if (connectionURI.startsWith("mysql://")) {
+  dialect = "mysql";
+} else {
+  return res.status(400).json({ error: "Unsupported or unknown database type." });
+}
+
+const tempSequelize = new Sequelize(connectionURI, {
+  dialect,
+  logging: false,
+  dialectOptions: {
+    ssl: false,
+    connectTimeout: 10000,
+  },
+});
+      
       
       // Test the connection
       await tempSequelize.authenticate();
@@ -72,7 +83,8 @@ export const createDatabase = async (req, res) => {
       userId,
       databaseName: finalName,
       connectionURI,
-      role: "owner"
+      role: "owner",
+      dbType: dialect === "postgres" ? "PostgreSQL" : "MySQL"
     });
 
     // Immediately cache the schema
@@ -96,56 +108,110 @@ export const createDatabase = async (req, res) => {
 };
 
 // Connect to an existing database (read-only role)
+
+
+// Connect to an existing database (with SSL support for PostgreSQL/MySQL)
 export const connectDatabase = async (req, res) => {
-    try {
-      console.log("route hit ->>", req.user);
-      console.log("Body received ->", req.body);
-      
-      if (!req.user || !req.user.id) {
-        return res.status(401).json({ error: "Unauthorized: Missing user information" });
-      }
-  
-      const { databaseName, connectionURI } = req.body;
-      const userId = req.user.id;
-  
-      if (!connectionURI) {
-        return res.status(400).json({ error: "Missing connection URI" });
-      }
-  
-      let finalName = databaseName;
-      try {
-        if (!finalName) {
-          finalName = new URL(connectionURI).pathname.slice(1);
-        }
-      } catch (err) {
-        return res.status(400).json({ error: "Invalid connection URI format" });
-      }
-  
-      const existingDatabase = await Database.findOne({
-        where: { userId, databaseName: finalName }
-      });
-  
-      if (existingDatabase) {
-        return res.status(400).json({ error: "You have already connected this database" });
-      }
-  
-      const database = await Database.create({
-        userId,
-        databaseName: finalName,
-        connectionURI,
-        role: "read-only"
-      });
-  
-      res.status(201).json({
-        success: true,
-        message: "Database connected successfully",
-        database
-      });
-    } catch (error) {
-      console.error("Failed to connect database:", error);
-      res.status(500).json({ error: "Failed to connect database" });
+  try {
+    console.log("route hit ->>", req.user);
+    console.log("Body received ->", req.body);
+
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: "Unauthorized: Missing user information" });
     }
-  };
+
+    const { databaseName, connectionURI, sslRequired = false, type } = req.body;
+    const userId = req.user.id;
+
+    if (!connectionURI) {
+      return res.status(400).json({ error: "Missing connection URI" });
+    }
+
+    let finalName = databaseName;
+    try {
+      if (!finalName) {
+        finalName = new URL(connectionURI).pathname.slice(1);
+      }
+    } catch (err) {
+      return res.status(400).json({ error: "Invalid connection URI format" });
+    }
+
+    const existingDatabase = await Database.findOne({
+      where: { userId, databaseName: finalName }
+    });
+
+    if (existingDatabase) {
+      return res.status(400).json({ error: "You have already connected this database" });
+    }
+
+    // Validate the `type` field and set dialect
+    let dialect;
+    if (type) {
+      const supportedTypes = ["postgres", "mysql"];
+      if (!supportedTypes.includes(type.toLowerCase())) {
+        return res.status(400).json({ error: "Unsupported database type. Only 'postgres' and 'mysql' are supported." });
+      }
+      dialect = type.toLowerCase();
+    } else {
+      // Fallback: infer from URI
+      if (connectionURI.startsWith("postgres://") || connectionURI.startsWith("postgresql://")) {
+        dialect = "postgres";
+      } else if (connectionURI.startsWith("mysql://")) {
+        dialect = "mysql";
+      } else {
+        return res.status(400).json({ error: "Could not infer database type from URI. Please specify the 'type'." });
+      }
+    }
+
+    // Setup SSL options
+    const sslOptions = (sslRequired || connectionURI.includes("sslmode=require")) ? {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    } : {};
+
+    // Test connection
+    try {
+      const tempSequelize = new Sequelize(connectionURI, {
+        dialect,
+        logging: false,
+        dialectOptions: {
+          ...sslOptions,
+          connectTimeout: 10000
+        }
+      });
+
+      await tempSequelize.authenticate();
+      console.log("✅ Connection successful:", dialect);
+      await tempSequelize.close();
+    } catch (connError) {
+      console.error("❌ Connection test failed:", connError.message);
+      return res.status(400).json({
+        error: "Failed to connect with the provided URI",
+        details: connError.message
+      });
+    }
+
+    const database = await Database.create({
+      userId,
+      databaseName: finalName,
+      connectionURI,
+      role: "read-only",
+      dbType: dialect === "postgres" ? "PostgreSQL" : "MySQL"
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Database connected successfully",
+      database
+    });
+
+  } catch (error) {
+    console.error("Failed to connect database:", error);
+    res.status(500).json({ error: "Failed to connect database" });
+  }
+};
 // Get all databases for a user
 export const listDatabases = async (req, res) => {
     try {
@@ -156,12 +222,13 @@ export const listDatabases = async (req, res) => {
           });
           
           const plainDatabases = databases.map(db => {
-              const { id, databaseName, role, updatedAt } = db.get({ plain: true });
+              const { id, databaseName, role, updatedAt , dbType } = db.get({ plain: true });
               return {
                   id,
                   name: databaseName,
                   accessLevel: role,
-                  lastAccessed: updatedAt
+                  lastAccessed: updatedAt,
+                   type: dbType || "PostgreSQL"
               };
           });
          
