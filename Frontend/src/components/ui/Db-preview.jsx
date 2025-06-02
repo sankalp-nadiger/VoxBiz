@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export const DbPreviewOption = ({ dbId, dbName, darkMode }) => {
   const [isHovering, setIsHovering] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [buttonRect, setButtonRect] = useState(null);
   
   const fetchPreviewData = async () => {
     if (previewData) return; // Already fetched
@@ -56,162 +58,193 @@ export const DbPreviewOption = ({ dbId, dbName, darkMode }) => {
     }
   };
   
-  const handleMouseEnter = () => {
+  const handleMouseEnter = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setButtonRect(rect);
     setIsHovering(true);
     fetchPreviewData();
   };
   
-  // Create style object for dynamic styling based on dark mode
-  const styles = {
-    container: {
-      position: 'relative',
-      display: 'inline-block'
-    },
-    previewButton: {
-      background: 'none',
-      border: 'none',
-      color: darkMode ? '#88aaff' : '#3366cc',
-      textDecoration: 'underline',
-      cursor: 'pointer',
-      padding: '2px 4px'
-    },
-    previewPopup: {
-      position: 'absolute',
-      top: '100%',
-      left: '0',
-      zIndex: 1000,
-      width: '400px',
-      background: darkMode ? '#1e1e1e' : 'white',
-      borderRadius: '6px',
-      boxShadow: darkMode ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.15)',
-      marginTop: '12px',
-      overflow: 'hidden',
-      color: darkMode ? '#e0e0e0' : 'inherit'
-    },
-    previewHeader: {
-      padding: '12px 16px',
-      borderBottom: darkMode ? '1px solid #333' : '1px solid #eaeaea',
-      background: darkMode ? '#2a2a2a' : '#f9f9f9'
-    },
-    headerTitle: {
-      margin: '0',
-      fontSize: '16px',
-      fontWeight: '500'
-    },
-    previewContent: {
-      display: 'flex',
-      flexDirection: 'column'
-    },
-    previewDataImage: {
-      padding: '12px 16px'
-    },
-    loadingErrorContainer: {
-      padding: '24px',
-      textAlign: 'center'
-    },
-    spinner: {
-      border: darkMode ? '3px solid rgba(255, 255, 255, 0.1)' : '3px solid rgba(0, 0, 0, 0.1)',
-      borderTopColor: darkMode ? '#88aaff' : '#3366cc',
-      borderRadius: '50%',
-      width: '24px',
-      height: '24px',
-      animation: 'spin 1s linear infinite',
-      margin: '0 auto 12px'
-    },
-    previewPointer: {
-      position: 'absolute',
-      top: '-8px',
-      left: '20px',
-      width: '16px',
-      height: '16px',
-      background: darkMode ? '#1e1e1e' : 'white',
-      transform: 'rotate(45deg)',
-      boxShadow: darkMode ? '-2px -2px 5px rgba(0, 0, 0, 0.2)' : '-2px -2px 5px rgba(0, 0, 0, 0.06)'
-    },
-    dbPreviewImage: {
-      background: darkMode ? '#2a2a2a' : '#f8f9fa',
-      border: darkMode ? '1px solid #444' : '1px solid #e0e0e0',
-      borderRadius: '4px',
-      fontFamily: 'monospace',
-      fontSize: '13px',
-      lineHeight: '1.5',
-      overflow: 'hidden'
-    },
-    dbPreviewHeader: {
-      padding: '8px 12px',
-      background: darkMode ? '#333' : '#e9ecef',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      borderBottom: darkMode ? '1px solid #444' : '1px solid #dee2e6'
-    },
-    dbName: {
-      fontWeight: 'bold',
-      fontSize: '14px'
-    },
-    dbType: {
-      color: darkMode ? '#adb5bd' : '#6c757d',
-      fontSize: '12px',
-      padding: '2px 6px',
-      background: darkMode ? '#444' : '#e2e6ea',
-      borderRadius: '4px'
-    },
-    dbPreviewDescription: {
-      padding: '8px 12px',
-      borderBottom: darkMode ? '1px solid #444' : '1px solid #dee2e6',
-      color: darkMode ? '#adb5bd' : '#6c757d',
-      fontStyle: 'italic'
-    },
-    dbPreviewTables: {
-      padding: '8px 12px'
-    },
-    dbPreviewSectionTitle: {
-      fontWeight: 'bold',
-      marginBottom: '6px',
-      color: darkMode ? '#ddd' : '#495057'
-    },
-    dbTableList: {
-      listStyle: 'none',
-      padding: '0',
-      margin: '0'
-    },
-    dbTableItem: {
-      padding: '4px 0'
-    },
-    tableName: {
-      fontWeight: 'bold',
-      color: darkMode ? '#88aaff' : '#0066cc'
-    },
-    tableColumns: {
-      color: darkMode ? '#adb5bd' : '#6c757d',
-      fontSize: '12px',
-      marginLeft: '6px'
-    },
-    moreIndicator: {
-      color: darkMode ? '#adb5bd' : '#6c757d',
-      fontStyle: 'italic'
-    },
-    noTables: {
-      color: darkMode ? '#adb5bd' : '#6c757d',
-      fontStyle: 'italic',
-      padding: '4px 0'
-    },
-    relationships: {
-      padding: '8px 12px',
-      borderTop: darkMode ? '1px solid #444' : '1px solid #dee2e6',
-      fontSize: '12px',
-      color: darkMode ? '#bbb' : '#495057'
-    },
-    relationshipsTitle: {
-      fontWeight: 'bold',
-      marginBottom: '6px',
-      color: darkMode ? '#ddd' : '#495057'
-    }
+  const handleMouseLeave = () => {
+    setIsHovering(false);
   };
   
-  // Add keyframes for spinner animation to document
-  React.useEffect(() => {
-    // Only add if it doesn't exist
+  // Preview popup component that will be rendered in portal
+  const PreviewPopup = () => {
+    if (!isHovering || !buttonRect) return null;
+    
+    const styles = {
+      position: 'fixed',
+      top: buttonRect.bottom + 8,
+      left: Math.max(16, Math.min(buttonRect.left, window.innerWidth - 416)),
+      zIndex: 9999,
+      width: '400px',
+      maxHeight: '500px',
+      overflowY: 'auto',
+      background: darkMode ? '#1e1e1e' : 'white',
+      borderRadius: '8px',
+      boxShadow: darkMode ? '0 8px 32px rgba(0, 0, 0, 0.6)' : '0 8px 32px rgba(0, 0, 0, 0.2)',
+      border: darkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+      color: darkMode ? '#e0e0e0' : '#1f2937'
+    };
+    
+    return (
+      <div style={styles}>
+        {/* Arrow pointer */}
+        <div style={{
+          position: 'absolute',
+          top: '-8px',
+          left: Math.max(20, buttonRect.left + buttonRect.width/2 - Math.max(16, Math.min(buttonRect.left, window.innerWidth - 416))),
+          width: '16px',
+          height: '16px',
+          background: darkMode ? '#1e1e1e' : 'white',
+          border: darkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+          borderBottom: 'none',
+          borderRight: 'none',
+          transform: 'rotate(45deg)'
+        }} />
+        
+        {isLoading ? (
+          <div style={{ padding: '24px', textAlign: 'center' }}>
+            <div style={{
+              border: darkMode ? '3px solid rgba(255, 255, 255, 0.1)' : '3px solid rgba(0, 0, 0, 0.1)',
+              borderTopColor: darkMode ? '#6366f1' : '#3b82f6',
+              borderRadius: '50%',
+              width: '24px',
+              height: '24px',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 12px'
+            }} />
+            <p>Loading preview...</p>
+          </div>
+        ) : error ? (
+          <div style={{ padding: '24px', textAlign: 'center' }}>
+            <p style={{ color: '#ef4444' }}>{error}</p>
+          </div>
+        ) : previewData ? (
+          <div>
+            {/* Header */}
+            <div style={{
+              padding: '16px',
+              borderBottom: darkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+              background: darkMode ? '#111827' : '#f9fafb'
+            }}>
+              <h3 style={{ margin: '0', fontSize: '16px', fontWeight: '600' }}>
+                {dbName} - Preview
+              </h3>
+            </div>
+            
+            {/* Database preview content */}
+            <div style={{ padding: '16px' }}>
+              <div style={{
+                background: darkMode ? '#111827' : '#f8fafc',
+                border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0',
+                borderRadius: '6px',
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                lineHeight: '1.5',
+                overflow: 'hidden'
+              }}>
+                {/* Database header */}
+                <div style={{
+                  padding: '12px',
+                  background: darkMode ? '#1f2937' : '#e2e8f0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderBottom: darkMode ? '1px solid #374151' : '1px solid #cbd5e1'
+                }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                    {previewData.name}
+                  </span>
+                  <span style={{
+                    color: darkMode ? '#9ca3af' : '#64748b',
+                    fontSize: '12px',
+                    padding: '2px 8px',
+                    background: darkMode ? '#374151' : '#cbd5e1',
+                    borderRadius: '4px'
+                  }}>
+                    {previewData.type}
+                  </span>
+                </div>
+                
+                {/* Description */}
+                <div style={{
+                  padding: '12px',
+                  borderBottom: darkMode ? '1px solid #374151' : '1px solid #cbd5e1',
+                  color: darkMode ? '#9ca3af' : '#64748b',
+                  fontStyle: 'italic',
+                  fontSize: '12px'
+                }}>
+                  {previewData.description}
+                </div>
+                
+                {/* Tables section */}
+                <div style={{ padding: '12px' }}>
+                  <div style={{
+                    fontWeight: 'bold',
+                    marginBottom: '8px',
+                    color: darkMode ? '#d1d5db' : '#374151'
+                  }}>
+                    Tables ({previewData.tableCount})
+                  </div>
+                  
+                  {previewData.tables && previewData.tables.length > 0 ? (
+                    <div style={{ listStyle: 'none', padding: '0', margin: '0' }}>
+                      {previewData.tables.slice(0, 8).map((table, idx) => (
+                        <div key={idx} style={{ padding: '4px 0' }}>
+                          <span style={{
+                            fontWeight: 'bold',
+                            color: darkMode ? '#6366f1' : '#2563eb'
+                          }}>
+                            {table}
+                          </span>
+                          {previewData.sampleColumns[table] && (
+                            <span style={{
+                              color: darkMode ? '#9ca3af' : '#64748b',
+                              fontSize: '12px',
+                              marginLeft: '6px'
+                            }}>
+                              ({previewData.sampleColumns[table].join(', ')}
+                              {previewData.sampleColumns[table].length < 3 ? '' : ', ...'})
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {previewData.tableCount > 8 && (
+                        <div style={{
+                          color: darkMode ? '#9ca3af' : '#64748b',
+                          fontStyle: 'italic',
+                          padding: '4px 0'
+                        }}>
+                          ... and {previewData.tableCount - Math.min(8, previewData.tables.length)} more
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{
+                      color: darkMode ? '#9ca3af' : '#64748b',
+                      fontStyle: 'italic',
+                      padding: '4px 0'
+                    }}>
+                      No tables found
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: '24px', textAlign: 'center' }}>
+            <p>Loading preview...</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // Add spinner keyframes
+  useEffect(() => {
     if (!document.getElementById('spinner-keyframes')) {
       const styleSheet = document.createElement('style');
       styleSheet.id = 'spinner-keyframes';
@@ -221,104 +254,33 @@ export const DbPreviewOption = ({ dbId, dbName, darkMode }) => {
         }
       `;
       document.head.appendChild(styleSheet);
-      
-      // Cleanup when component unmounts
-      return () => {
-        const element = document.getElementById('spinner-keyframes');
-        if (element) {
-          document.head.removeChild(element);
-        }
-      };
     }
   }, []);
   
   return (
-    <div
-      style={styles.container}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setIsHovering(false)}
-    >
-      <button style={styles.previewButton}>
+    <>
+      <button
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: darkMode ? '#6366f1' : '#2563eb',
+          textDecoration: 'underline',
+          cursor: 'pointer',
+          padding: '4px 8px',
+          fontSize: '14px'
+        }}
+      >
         Preview Data
       </button>
-          
-      {isHovering && (
-  <div style={{
-    ...styles.previewPopup,
-    position: 'fixed',
-    zIndex: 9999,
-    top: '50%',           // Center vertically
-    left: '50%',          // Center horizontally
-    transform: 'translate(-50%, -50%)', // Adjust for perfect centering
-    backgroundColor: 'white', // Ensure visible background
-    border: '2px solid black',  // Visible border
-    padding: '20px',
-    boxShadow: '0 0 20px rgba(0,0,0,0.5)', // Dramatic shadow
-    display: 'block'      // Force display
-  }}>
-          {isLoading ? (
-            <div style={styles.loadingErrorContainer}>
-              <div style={styles.spinner}></div>
-              <p>Loading preview...</p>
-            </div>
-          ) : error ? (
-            <div style={styles.loadingErrorContainer}>
-              <p>{error}</p>
-            </div>
-          ) : previewData ? (
-            <div style={styles.previewContent}>
-              <div style={styles.previewHeader}>
-                <h3 style={styles.headerTitle}>{dbName} - Preview</h3>
-              </div>
-              <div style={styles.previewDataImage}>
-                <div style={styles.dbPreviewImage}>
-                  <div style={styles.dbPreviewHeader}>
-                    <span style={styles.dbName}>{previewData.name}</span>
-                    <span style={styles.dbType}>{previewData.type}</span>
-                  </div>
-                    
-                  <div style={styles.dbPreviewDescription}>
-                    {previewData.description}
-                  </div>
-                    
-                  <div style={styles.dbPreviewTables}>
-                    <div style={styles.dbPreviewSectionTitle}>Tables ({previewData.tableCount})</div>
-                    {previewData.tables && previewData.tables.length > 0 ? (
-                      <ul style={styles.dbTableList}>
-                        {previewData.tables.map((table, idx) => (
-                          <li key={idx} style={styles.dbTableItem}>
-                            <span style={styles.tableName}>{table}</span>
-                            {previewData.sampleColumns[table] && (
-                              <span style={styles.tableColumns}>
-                                ({previewData.sampleColumns[table].join(', ')}
-                                {previewData.sampleColumns[table].length < 3 ? '' : ', ...'})
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                        {previewData.tableCount > previewData.tables.length && (
-                          <li style={{...styles.dbTableItem, ...styles.moreIndicator}}>
-                            ... and {previewData.tableCount - previewData.tables.length} more
-                          </li>
-                        )}
-                      </ul>
-                    ) : (
-                      <div style={styles.noTables}>No tables found</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={styles.loadingErrorContainer}>
-              <p>Loading preview...</p>
-            </div>
-          )}
-              
-          <div style={styles.previewPointer}></div>
-        </div>
+      
+      {/* Render popup in portal to escape card container */}
+      {typeof document !== 'undefined' && createPortal(
+        <PreviewPopup />,
+        document.body
       )}
-    </div>
+    </>
   );
 };
 
