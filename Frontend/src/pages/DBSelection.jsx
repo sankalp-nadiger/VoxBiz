@@ -753,43 +753,42 @@ const DatabaseDashboard = () => {
                 >
                   {/* Card Header */}
                   <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-  <div className="flex items-start justify-between mb-0">
-    <div className="flex items-center space-x-3 min-w-0 flex-1"> {/* Added min-w-0 flex-1 and proper spacing */}
-      <div className="flex-shrink-0">
-        {dbTypeIconMap[db.type] ? (
-          <div className="w-10 h-10"> {/* Fixed: w-25 h-25 are not valid Tailwind classes */}
-            {dbTypeIconMap[db.type]}
-          </div>
-        ) : (
-          <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-          </svg>
-        )}
-      </div>
-      <div className="min-w-0 flex-1 group relative"> {/* Added group for hover effects */}
-        <h3 className="font-semibold text-lg truncate cursor-default">
-          {db.name}
-        </h3>
-        {/* Custom tooltip that appears on hover */}
-        <div className="absolute left-0 top-full mt-1 px-2 py-1 bg-black text-white text-sm rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 whitespace-nowrap">
-          {db.name}
-        </div>
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          {db.type || 'Database'}
-        </p>
-      </div>
-    </div>
-    <div className="flex-shrink-0 ml-4"> {/* Added proper margin */}
-      <span className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
-        db.accessLevel === 'read-only'
-          ? (darkMode ? 'bg-yellow-800 text-yellow-200' : 'bg-yellow-100 text-yellow-800')
-          : (darkMode ? 'bg-green-800 text-green-200' : 'bg-green-100 text-green-800')
-      }`}>
-        {db.accessLevel === 'read-only' ? translations.readOnly : translations.readWrite}
-      </span>
-    </div>
-  </div>
-</div>
+                    <div className="flex items-start justify-between mb-0">
+                      <div className="flex items-center space-x-3 min-w-0 flex-1"> {/* Added min-w-0 flex-1 and proper spacing */}
+                        <div className="flex-shrink-0">
+                          {dbTypeIconMap[db.type] ? (
+                            <div className="w-10 h-10"> {/* Fixed: w-25 h-25 are not valid Tailwind classes */}
+                              {dbTypeIconMap[db.type]}
+                            </div>
+                          ) : (
+                            <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1 group relative"> {/* Added group for hover effects */}
+                          <h3 className="font-semibold text-lg truncate cursor-default">
+                            {db.name}
+                          </h3>
+                          {/* Custom tooltip that appears on hover */}
+                          <div className="absolute left-0 top-full mt-1 px-2 py-1 bg-black text-white text-sm rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 whitespace-nowrap">
+                            {db.name}
+                          </div>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {db.type || 'Database'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 ml-4"> {/* Added proper margin */}
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${db.accessLevel === 'read-only'
+                            ? (darkMode ? 'bg-yellow-800 text-yellow-200' : 'bg-yellow-100 text-yellow-800')
+                            : (darkMode ? 'bg-green-800 text-green-200' : 'bg-green-100 text-green-800')
+                          }`}>
+                          {db.accessLevel === 'read-only' ? translations.readOnly : translations.readWrite}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   {/* Card Body */}
                   <div className="p-6">
                     <div className="space-y-3">
