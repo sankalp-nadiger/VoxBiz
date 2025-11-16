@@ -111,7 +111,11 @@ const CreateDatabaseModal = ({ darkMode, onClose }) => {
           }
         });
         
-        response = await axios.post("http://localhost:8000/api/database/create", formPayload);
+        response = await axios.post(
+          "http://localhost:8000/api/database/create", 
+          formPayload,
+          { withCredentials: true }
+        );
       } else {
         // Excel upload
         const formPayload = new FormData();
@@ -123,7 +127,11 @@ const CreateDatabaseModal = ({ darkMode, onClose }) => {
           formPayload.append("textInstructions", textInput);
         }
         
-        response = await axios.post("http://localhost:3000/api/database/excel", formPayload);
+        response = await axios.post(
+          "http://localhost:3000/api/database/excel", 
+          formPayload,
+          { withCredentials: true }
+        );
       }
       
       if (response.data && response.data.schema) {
